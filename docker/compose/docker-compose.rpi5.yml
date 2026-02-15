@@ -16,6 +16,10 @@ services:
         XRCE_DDS_VERSION: ${XRCE_DDS_VERSION:-v2.4.3}
         PX4_MSGS_BRANCH: ${PX4_MSGS_BRANCH:-main}
         PX4_ROS_COM_BRANCH: ${PX4_ROS_COM_BRANCH:-main}
+        ROS_WS: ${ROS_WS:-/ros2_ws}
+        CONTAINER_USER: ${CONTAINER_USER:-peregrine}
+        USER_UID: ${USER_UID:-1000}
+        USER_GID: ${USER_GID:-1000}
     image: ${REGISTRY:-ghcr.io/your-org}/${PROJECT_NAME:-ros2-px4-flight}-rpi5:latest
     container_name: ${PROJECT_NAME:-ros2-px4-flight}-aircraft-${DRONE_ID:-1}
     env_file: ../.env
@@ -26,12 +30,11 @@ services:
     tty: true
     environment:
       - DRONE_ID=${DRONE_ID:-1}
-      - RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION:-rmw_cyclonedds_cpp}
-      - CYCLONEDDS_URI=/config/cyclonedds.xml
+      - ROS_WS=${ROS_WS:-/ros2_ws}
       - START_XRCE_AGENT=true
       - XRCE_DDS_PORT=${XRCE_DDS_PORT:-8888}
     volumes:
-      - ../config/cyclonedds.xml:/config/cyclonedds.xml:ro
+      - ../../:${ROS_WS:-/ros2_ws}:rw
     devices:
       - /dev/ttyAMA0:/dev/ttyAMA0      # UART to Pixhawk (RPi5 default)
       - /dev/ttyUSB0:/dev/ttyUSB0      # USB serial (if used)

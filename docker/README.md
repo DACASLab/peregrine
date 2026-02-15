@@ -87,6 +87,26 @@ make build-rpi5
 DRONE_ID=1 make rpi5
 ```
 
+### Host UID/GID Mapping (Non-Root User)
+
+Images create a non-root user and map it to host UID/GID so bind-mounted files keep correct ownership on host.
+
+Set these in `docker/.env` before building:
+
+```bash
+CONTAINER_USER=peregrine
+USER_UID=1000   # id -u
+USER_GID=1000   # id -g
+```
+
+Tooling notes:
+
+1. `tmuxinator` is installed in all images.
+2. Default profile is shipped at `~/.config/tmuxinator/peregrine.yml` inside the container.
+3. Start with `tmuxinator start peregrine`.
+4. Installations happen as root during image build (normal Docker practice).
+5. Runtime config should live under `/home/${CONTAINER_USER}` (for example `~/.config/tmuxinator`), not under `/root`.
+
 Or without the Makefile:
 
 ```bash
@@ -109,35 +129,91 @@ ros2 topic list
 
 ---
 
-## Dev Mode
+## Workspace Mount (Default)
 
-Mount the host `../src` into `/ros2_ws/src` so you can edit in VS Code
-and build inside the container without image rebuilds:
-
-```bash
-make dev        # simulation with source mounted
-make dev-jetson # jetson with source mounted
-make dev-rpi5   # rpi5 with source mounted
-```
-
-For simulation this uses `docker-compose.dev.yml`:
+All target compose files mount the host repo root (`../../`) into `${ROS_WS}` (default `${ROS_WS}=/ros2_ws`) so you can edit in VS Code and build inside the container without image rebuilds:
+There is no separate dev-override compose file in the current design.
 
 ```bash
-docker compose \
-  -f compose/docker-compose.simulation.yml \
-  -f compose/docker-compose.dev.yml \
-  run --rm sim bash
+make dev        # simulation shell
+make dev-jetson # jetson shell
+make dev-rpi5   # rpi5 shell
 ```
 
-For Jetson / RPi5 dev shells, the Makefile uses `docker-compose.dev.aircraft.yml`.
+The `dev*` targets open an interactive shell with the same mounted workspace:
+
+```bash
+docker compose -f compose/docker-compose.simulation.yml run --rm sim bash
+```
 
 Inside the container:
 
 ```bash
-cd /ros2_ws
+cd ${ROS_WS:-/ros2_ws}
 colcon build --symlink-install --packages-select your_package
 source install/setup.bash
 ros2 run your_package your_node
+```
+
+---
+
+## Day-to-Day Usage
+
+### `make sim` vs `make dev` vs `make shell-sim`
+
+1. `make sim`
+   - Runs the `sim` service with `docker compose up`.
+   - Use when you want a long-running simulation container.
+   - Best for multi-terminal workflows (PX4, bridge, monitoring in parallel).
+
+2. `make dev`
+   - Runs `docker compose run --rm sim bash`.
+   - Use for a quick disposable shell (build/test commands, one-off debugging).
+   - Container is removed when you exit the shell.
+
+3. `make shell-sim`
+   - Runs `docker exec` into an already running `sim` container.
+   - Use when `make sim` (or VS Code devcontainer) is already running and you need another terminal.
+
+### VS Code devcontainer behavior
+
+1. `Dev Containers: Reopen in Container` uses `docker-compose.simulation.yml` service `sim`.
+2. Workspace opens at `${ROS_WS}` (default `/ros2_ws`) with the same bind mount behavior as CLI.
+3. VS Code attaches as the image default non-root user (`CONTAINER_USER`).
+4. `remoteUser` is intentionally omitted in `.devcontainer/devcontainer.json` so it follows the Dockerfile `USER` (avoids mismatch if `CONTAINER_USER` changes).
+5. Use VS Code terminals for `colcon build`, `ros2 run`, PX4 launch commands.
+6. If you changed `ROS_WS`, update `.devcontainer/devcontainer.json` `workspaceFolder` to match.
+7. If you also want a normal host terminal into the same container, use `make shell-sim`.
+
+### Recommended flows
+
+1. GUI sim + multiple terminals (CLI):
+```bash
+cd docker
+make sim
+# in another host terminal
+make shell-sim
+```
+
+2. Quick command-only iteration:
+```bash
+cd docker
+make dev
+```
+
+3. VS Code-first workflow:
+```bash
+# Open repo in VS Code -> Reopen in Container
+# Then inside integrated terminal:
+cd ${ROS_WS:-/ros2_ws}
+colcon build --symlink-install
+```
+
+4. Hardware shells:
+```bash
+cd docker
+make dev-jetson
+make dev-rpi5
 ```
 
 ---
@@ -161,7 +237,7 @@ cd ../../docker
 make dev
 
 # 4. Build & test inside the container
-cd /ros2_ws && colcon build --symlink-install
+cd ${ROS_WS:-/ros2_ws} && colcon build --symlink-install
 ```
 
 When your package needs a new system or ROS dependency, add the
@@ -180,23 +256,6 @@ DRONE_ID=1 docker compose -f compose/docker-compose.simulation.yml up
 # Terminal 2
 DRONE_ID=2 docker compose -f compose/docker-compose.simulation.yml up
 ```
-
----
-
-## Cross-Host Communication (Sim PC ↔ Jetson ↔ RPi5)
-
-Edit `config/cyclonedds.xml`, uncomment the `<Peers>` block and add IPs:
-
-```xml
-<Peers>
-  <Peer address="192.168.1.100"/>  <!-- Sim PC -->
-  <Peer address="192.168.1.101"/>  <!-- Jetson -->
-  <Peer address="192.168.1.102"/>  <!-- RPi5 -->
-</Peers>
-```
-
-For wireless / NAT-heavy setups, consider adding the
-[Zenoh ROS 2 bridge](https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds).
 
 ---
 
@@ -237,16 +296,12 @@ peregrine/
 │   │   ├── Dockerfile.simulation
 │   │   ├── Dockerfile.jetson
 │   │   ├── Dockerfile.rpi5
-│   │   └── Dockerfile.deps
 │   ├── compose/
 │   │   ├── docker-compose.simulation.yml
 │   │   ├── docker-compose.jetson.yml
 │   │   ├── docker-compose.rpi5.yml
-│   │   ├── docker-compose.dev.yml
-│   │   └── docker-compose.dev.aircraft.yml
 │   └── config/
-│       ├── entrypoint.sh
-│       └── cyclonedds.xml
+│       └── entrypoint.sh
 └── .devcontainer/                     # VS Code entry (recommended)
 ```
 
@@ -262,9 +317,12 @@ peregrine/
 | `PX4_SIM_MODEL` | `x500` | Sim | Gazebo vehicle model |
 | `PX4_GZ_WORLD` | `default` | Sim | Gazebo world file |
 | `HEADLESS` | `false` | Sim | Run Gazebo headless |
+| `ROS_WS` | `/ros2_ws` | All | ROS 2 workspace path inside container |
 | `XRCE_DDS_PORT` | `8888` | All | XRCE-DDS Agent UDP port |
-| `RMW_IMPLEMENTATION` | `rmw_cyclonedds_cpp` | All | DDS middleware |
 | `START_XRCE_AGENT` | `false` | Deploy | Auto-start XRCE-DDS agent on boot |
+| `CONTAINER_USER` | `peregrine` | All | Non-root username inside container |
+| `USER_UID` | `1000` | All | Host UID to map container user |
+| `USER_GID` | `1000` | All | Host GID to map container user |
 
 ---
 
@@ -279,8 +337,8 @@ peregrine/
 | `make sim` | Run simulation (interactive, GUI) |
 | `make jetson` | Run Jetson container |
 | `make rpi5` | Run RPi5 container |
-| `make dev` | Sim with host source mounted |
-| `make dev-jetson` | Jetson with host source mounted |
+| `make dev` | Sim interactive shell |
+| `make dev-jetson` | Jetson interactive shell |
 | `make shell-sim` | Exec bash into running sim container |
 | `make down` | Stop all containers |
 | `make clean` | Stop + remove project images |

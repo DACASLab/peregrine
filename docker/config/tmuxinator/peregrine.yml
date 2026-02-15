@@ -1,0 +1,17 @@
+name: peregrine
+root: <%= ENV.fetch("ROS_WS", "/ros2_ws") %>
+
+pre_window:
+  - source /opt/ros/${ROS_DISTRO:-humble}/setup.bash
+  - source /opt/px4_ws/install/setup.bash
+  - '[ -f install/setup.bash ] && source install/setup.bash || true'
+  - clear
+
+windows:
+  - main:
+      layout: main-vertical
+      panes:
+        -
+        -
+  - build: cd <%= ENV.fetch("ROS_WS", "/ros2_ws") %>
+  - px4: cd /opt/PX4-Autopilot

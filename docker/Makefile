@@ -8,8 +8,6 @@ export
 COMPOSE_SIM    := -f compose/docker-compose.simulation.yml
 COMPOSE_JETSON := -f compose/docker-compose.jetson.yml
 COMPOSE_RPI5   := -f compose/docker-compose.rpi5.yml
-COMPOSE_DEV_SIM := -f compose/docker-compose.dev.yml
-COMPOSE_DEV_AIR := -f compose/docker-compose.dev.aircraft.yml
 
 # ── Build ────────────────────────────────────────────────────────────────────
 
@@ -36,17 +34,17 @@ jetson:
 rpi5:
 	docker compose $(COMPOSE_RPI5) up
 
-# ── Dev mode (mounts ../src for live editing) ─────────────────────────────────
+# ── Dev shells (workspace is always mounted) ─────────────────────────────────
 
 dev:
 	xhost +local:docker 2>/dev/null || true
-	docker compose $(COMPOSE_SIM) $(COMPOSE_DEV_SIM) run --rm sim bash
+	docker compose $(COMPOSE_SIM) run --rm sim bash
 
 dev-jetson:
-	docker compose $(COMPOSE_JETSON) $(COMPOSE_DEV_AIR) run --rm aircraft bash
+	docker compose $(COMPOSE_JETSON) run --rm aircraft bash
 
 dev-rpi5:
-	docker compose $(COMPOSE_RPI5) $(COMPOSE_DEV_AIR) run --rm aircraft bash
+	docker compose $(COMPOSE_RPI5) run --rm aircraft bash
 
 # ── Shell into running container ─────────────────────────────────────────────
 
@@ -84,6 +82,8 @@ info:
 	@echo "ROS_DISTRO:   $(ROS_DISTRO)"
 	@echo "PX4_VERSION:  $(PX4_VERSION)"
 	@echo "DRONE_ID:     $(DRONE_ID)"
+	@echo "ROS_WS:       $(ROS_WS)"
+	@echo "User:         $(CONTAINER_USER) ($(USER_UID):$(USER_GID))"
 
 .PHONY: build-sim build-jetson build-rpi5 build-all \
         sim jetson rpi5 dev dev-jetson dev-rpi5 \

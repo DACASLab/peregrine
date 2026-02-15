@@ -14,7 +14,7 @@ peregrine/
 ├── docker/
 │   ├── docker/              # Dockerfiles
 │   ├── compose/             # compose stacks by target
-│   ├── config/              # entrypoint + CycloneDDS config
+│   ├── config/              # entrypoint scripts
 │   ├── .env                 # version pins
 │   └── Makefile             # operational commands
 └── .devcontainer/
@@ -30,7 +30,9 @@ make build-sim
 make dev
 ```
 
-`make dev` mounts `../src` into `/ros2_ws/src` inside the container.
+All targets mount the entire repo workspace into `${ROS_WS}` (`ROS_WS` default: `/ros2_ws`), so code and `colcon` artifacts persist on host.
+`make dev` opens a disposable shell; use `make sim` / `make jetson` / `make rpi5` for long-running services.
+Containers run as a non-root user mapped to host UID/GID (`CONTAINER_USER`, `USER_UID`, `USER_GID` in `docker/.env`).
 
 ## Repo management
 
@@ -66,7 +68,7 @@ git commit -m "Bump submodule pointers"
 ## VS Code
 
 Open this repo root in VS Code, then use `Dev Containers: Reopen in Container`.
-The configuration in `.devcontainer/devcontainer.json` reuses the existing simulation compose service and dev mount.
+The configuration in `.devcontainer/devcontainer.json` reuses the simulation compose service with the same workspace bind mount and non-root container user.
 
 ## Architecture and image strategy
 

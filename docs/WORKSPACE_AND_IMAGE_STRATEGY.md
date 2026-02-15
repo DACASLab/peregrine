@@ -10,14 +10,14 @@ This repo currently has two layers:
 1. `docker-compose.simulation.yml` builds/runs `sim` on x86+NVIDIA with Gazebo + PX4 SITL.
 2. `docker-compose.jetson.yml` builds/runs `aircraft` for Orin (arm64, CUDA/TensorRT).
 3. `docker-compose.rpi5.yml` builds/runs `aircraft` for RPi5 (arm64, lightweight/headless).
-4. `docker-compose.dev.yml` mounts `../../src` for simulation dev.
-5. `docker-compose.dev.aircraft.yml` mounts `../../src` for Jetson/RPi dev.
+4. All target compose files mount the full repo workspace (`../../`) to `${ROS_WS}`.
 
 Common behavior:
 
-1. `entrypoint.sh` sources ROS + PX4 message workspace + `/ros2_ws`.
+1. `entrypoint.sh` sources ROS + PX4 message workspace + `${ROS_WS}` (default `/ros2_ws`).
 2. `DRONE_ID` is mapped to `ROS_DOMAIN_ID`.
 3. Jetson/RPi set `START_XRCE_AGENT=true` so MicroXRCEAgent starts automatically.
+4. Containers run as non-root user mapped to host UID/GID for bind-mount ownership.
 
 ## Recommended source layout
 
@@ -73,12 +73,12 @@ Keep `vision` as a tag or dedicated Dockerfile variant so non-vision deployments
 
 Use the repo root in VS Code and `Dev Containers: Reopen in Container`.
 
-The provided `.devcontainer/devcontainer.json` attaches to the existing `sim` compose service and keeps `src/` mounted at `/ros2_ws/src`.
+The provided `.devcontainer/devcontainer.json` attaches to the existing `sim` compose service and reuses the same full-workspace bind mount.
 
 Build/test inside container:
 
 ```bash
-cd /ros2_ws
+cd ${ROS_WS:-/ros2_ws}
 colcon build --symlink-install
 source install/setup.bash
 ```
