@@ -1,0 +1,39 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  docker-compose.jetson.yml — Build & run on Jetson Orin Nano / NX          ║
+# ║                                                                            ║
+# ║  Build:   docker compose -f compose/docker-compose.jetson.yml build        ║
+# ║  Run:     DRONE_ID=1 docker compose -f compose/docker-compose.jetson.yml up║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+services:
+  aircraft:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.jetson
+      args:
+        JETSON_BASE_IMAGE: ${JETSON_BASE_IMAGE:-nvcr.io/nvidia/l4t-jetpack:r36.4.0}
+        ROS_DISTRO: ${ROS_DISTRO:-humble}
+        XRCE_DDS_VERSION: ${XRCE_DDS_VERSION:-v2.4.3}
+        PX4_MSGS_BRANCH: ${PX4_MSGS_BRANCH:-main}
+        PX4_ROS_COM_BRANCH: ${PX4_ROS_COM_BRANCH:-main}
+    image: ${REGISTRY:-ghcr.io/your-org}/${PROJECT_NAME:-ros2-px4-flight}-jetson:latest
+    container_name: ${PROJECT_NAME:-ros2-px4-flight}-aircraft-${DRONE_ID:-1}
+    env_file: ../.env
+    runtime: nvidia
+    network_mode: host
+    ipc: host
+    privileged: true
+    stdin_open: true
+    tty: true
+    environment:
+      - DRONE_ID=${DRONE_ID:-1}
+      - RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION:-rmw_cyclonedds_cpp}
+      - CYCLONEDDS_URI=/config/cyclonedds.xml
+      - START_XRCE_AGENT=true
+      - XRCE_DDS_PORT=${XRCE_DDS_PORT:-8888}
+    volumes:
+      - ../config/cyclonedds.xml:/config/cyclonedds.xml:ro
+    devices:
+      - /dev/ttyTHS0:/dev/ttyTHS0      # UART to Pixhawk (adjust as needed)
+      - /dev/ttyUSB0:/dev/ttyUSB0      # USB serial (if used)
+    command: bash

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+  CycloneDDS configuration for ros2-px4-docker.
+  
+  This config enables peer-to-peer discovery across Docker containers
+  and across hosts (for HITL / multi-machine setups).
+
+  CUSTOMIZE:
+    - Add IPs under <Peers> for multi-host setups (sim PC ↔ Jetson ↔ RPi5)
+    - Adjust <NetworkInterfaceAddress> if you need a specific NIC
+-->
+<CycloneDDS xmlns="https://cdds.io/config" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="https://cdds.io/config https://raw.githubusercontent.com/eclipse-cyclonedds/cyclonedds/master/etc/cyclonedds.xsd">
+  <Domain>
+    <General>
+      <!-- Allow large messages (useful for image topics, point clouds) -->
+      <MaxMessageSize>65500B</MaxMessageSize>
+      <FragmentSize>4000B</FragmentSize>
+    </General>
+    <Discovery>
+      <!-- 
+        For multi-host setups, add peer IPs here.
+        Example: sim PC at 192.168.1.100, Jetson at 192.168.1.101
+      -->
+      <ParticipantIndex>auto</ParticipantIndex>
+      <MaxAutoParticipantIndex>120</MaxAutoParticipantIndex>
+      <!--
+      <Peers>
+        <Peer address="192.168.1.100"/>
+        <Peer address="192.168.1.101"/>
+        <Peer address="192.168.1.102"/>
+      </Peers>
+      -->
+    </Discovery>
+    <Internal>
+      <SocketReceiveBufferSize min="10MB"/>
+    </Internal>
+    <Tracing>
+      <Verbosity>warning</Verbosity>
+    </Tracing>
+  </Domain>
+</CycloneDDS>

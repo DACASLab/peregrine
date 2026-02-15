@@ -1,0 +1,31 @@
+{
+  "name": "peregrine-sim-dev",
+  "dockerComposeFile": [
+    "../docker/compose/docker-compose.simulation.yml",
+    "../docker/compose/docker-compose.dev.yml"
+  ],
+  "service": "sim",
+  "workspaceFolder": "/workspaces/peregrine",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/peregrine,type=bind,consistency=cached",
+  "shutdownAction": "stopCompose",
+  "overrideCommand": true,
+  "initializeCommand": "bash -lc 'xhost +local:docker >/dev/null 2>&1 || true'",
+  "remoteUser": "root",
+  "postCreateCommand": "bash -lc 'source /opt/ros/${ROS_DISTRO:-humble}/setup.bash && rosdep update || true'",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-iot.vscode-ros",
+        "ms-vscode.cpptools",
+        "ms-python.python",
+        "ms-azuretools.vscode-docker",
+        "ms-vscode.makefile-tools",
+        "twxs.cmake"
+      ],
+      "settings": {
+        "ROS2.distro": "humble",
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  }
+}

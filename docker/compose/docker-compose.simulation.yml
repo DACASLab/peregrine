@@ -1,0 +1,47 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  docker-compose.simulation.yml — Build & run on PC with NVIDIA GPU         ║
+# ║                                                                            ║
+# ║  Build:   docker compose -f compose/docker-compose.simulation.yml build    ║
+# ║  Run:     docker compose -f compose/docker-compose.simulation.yml up       ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+services:
+  sim:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.simulation
+      args:
+        SIM_BASE_IMAGE: ${SIM_BASE_IMAGE:-nvcr.io/nvidia/cuda:12.8.1-cudnn-runtime-ubuntu22.04}
+        ROS_DISTRO: ${ROS_DISTRO:-humble}
+        PX4_VERSION: ${PX4_VERSION:-v1.15.4}
+        XRCE_DDS_VERSION: ${XRCE_DDS_VERSION:-v2.4.3}
+        PX4_MSGS_BRANCH: ${PX4_MSGS_BRANCH:-main}
+        PX4_ROS_COM_BRANCH: ${PX4_ROS_COM_BRANCH:-main}
+    image: ${REGISTRY:-ghcr.io/your-org}/${PROJECT_NAME:-ros2-px4-flight}-simulation:latest
+    container_name: ${PROJECT_NAME:-ros2-px4-flight}-sim
+    env_file: ../.env
+    network_mode: host
+    ipc: host
+    privileged: true
+    stdin_open: true
+    tty: true
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - DRONE_ID=${DRONE_ID:-1}
+      - RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION:-rmw_cyclonedds_cpp}
+      - CYCLONEDDS_URI=/config/cyclonedds.xml
+      - PX4_SIM_MODEL=${PX4_SIM_MODEL:-x500}
+      - PX4_GZ_WORLD=${PX4_GZ_WORLD:-default}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${HOME}/.Xauthority:/root/.Xauthority:ro
+      - ../config/cyclonedds.xml:/config/cyclonedds.xml:ro
+      # DEV MODE: use docker-compose.dev.yml to mount ../../src:/ros2_ws/src
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu, compute, utility, graphics]
+    command: bash
