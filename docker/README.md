@@ -38,7 +38,7 @@ Inspired by [aerial-autonomy-stack](https://github.com/JacopoPan/aerial-autonomy
   │ ROS2 desk │  │ ROS2 base │  │ ROS2 base │
   │ Gazebo    │  │ CUDA/TRT  │  │           │
   │ PX4 SITL  │  │ GStreamer │  │ Serial    │
-  │ px4_msgs  │  │ px4_msgs  │  │ px4_msgs  │
+  │ src/ ws   │  │ src/ ws   │  │ src/ ws   │
   │ XRCE-DDS  │  │ XRCE-DDS  │  │ XRCE-DDS │
   └───────────┘  └───────────┘  └───────────┘
 ```
@@ -104,14 +104,23 @@ Tooling notes:
 1. `tmuxinator` is installed in all images.
 2. Default profile is shipped at `~/.config/tmuxinator/peregrine.yml` inside the container.
 3. Start with `tmuxinator start peregrine`.
-4. Installations happen as root during image build (normal Docker practice).
-5. Runtime config should live under `/home/${CONTAINER_USER}` (for example `~/.config/tmuxinator`), not under `/root`.
+4. `starship` is installed in all images; default config is at `~/.config/starship.toml`.
+5. Installations happen as root during image build (normal Docker practice).
+6. Runtime config should live under `/home/${CONTAINER_USER}` (for example `~/.config/tmuxinator`), not under `/root`.
 
 Or without the Makefile:
 
 ```bash
 docker compose -f compose/docker-compose.simulation.yml build
 docker compose -f compose/docker-compose.simulation.yml up
+```
+
+Optional auth env file (auto-loaded by `make` if present):
+
+```bash
+cd docker
+cp .env.auth.example .env.auth
+# set OPENAI_API_KEY / ANTHROPIC_API_KEY
 ```
 
 ### Inside the simulation container
@@ -121,7 +130,7 @@ docker compose -f compose/docker-compose.simulation.yml up
 cd /opt/PX4-Autopilot && make px4_sitl gz_x500
 
 # Terminal 2: start the ROS2 bridge
-MicroXRCEAgent udp4 -p 8888
+MicroXRCEAgent udp4
 
 # Terminal 3: verify
 ros2 topic list
@@ -154,6 +163,8 @@ colcon build --symlink-install --packages-select your_package
 source install/setup.bash
 ros2 run your_package your_node
 ```
+
+`src/px4_msgs` is expected in this mounted workspace (submodule) and is built with your normal `colcon` workflow.
 
 ---
 
@@ -218,6 +229,23 @@ colcon build --symlink-install
 cd docker
 make dev-jetson
 make dev-rpi5
+```
+
+### Using `codex` and `claude` in-container
+
+The simulation image installs both CLIs (`@openai/codex` and `@anthropic-ai/claude-code`).
+
+Use API-key env auth with a local auth file:
+
+```bash
+cd docker
+cp .env.auth.example .env.auth
+# fill OPENAI_API_KEY and ANTHROPIC_API_KEY
+make sim
+# in another terminal
+make shell-sim
+codex --help
+claude --help
 ```
 
 ---
@@ -292,9 +320,10 @@ peregrine/
 ├── src/
 │   ├── peregrine_core/                # Core flight stack repo
 │   ├── peregrine_app_<name>/          # App repo (submodule)
-│   └── px4_msgs/                      # Optional local mirror/fork
+│   └── px4_msgs/                      # PX4 message definitions (submodule)
 ├── docker/
 │   ├── .env                           # ★ Version pins
+│   ├── .env.auth.example              # Optional API-key auth template
 │   ├── Makefile                       # ★ make build-sim, make dev, etc.
 │   ├── docker/
 │   │   ├── Dockerfile.simulation
@@ -317,8 +346,6 @@ peregrine/
 |---|---|---|---|
 | `ROS_DISTRO` | `humble` | All | ROS 2 distribution |
 | `PX4_VERSION` | `v1.16.1` | Sim | PX4 firmware tag for SITL |
-| `PX4_MSGS_BRANCH` | `release/1.16` | All | `px4_msgs` branch to build in `/opt/px4_ws` |
-| `PX4_ROS_COM_BRANCH` | `main` | All | `px4_ros_com` branch to build in `/opt/px4_ws` |
 | `DRONE_ID` | `1` | All | Sets `ROS_DOMAIN_ID` |
 | `ROS_LOCALHOST_ONLY` | `1` | All | Restrict DDS traffic to localhost |
 | `PX4_SIM_MODEL` | `x500` | Sim | Gazebo vehicle model |
@@ -328,6 +355,11 @@ peregrine/
 | `CONTAINER_USER` | `peregrine` | All | Non-root username inside container |
 | `USER_UID` | `1000` | All | Host UID to map container user |
 | `USER_GID` | `1000` | All | Host GID to map container user |
+
+Optional `docker/.env.auth` (not committed):
+
+1. `OPENAI_API_KEY` for `codex`
+2. `ANTHROPIC_API_KEY` for `claude`
 
 ---
 
@@ -348,6 +380,7 @@ peregrine/
 | `make rpi5` | Run RPi5 container |
 | `make dev` | Sim interactive shell |
 | `make dev-jetson` | Jetson interactive shell |
+| `make dev-rpi5` | RPi5 interactive shell |
 | `make shell-sim` | Exec bash into running sim container |
 | `make down` | Stop all containers |
 | `make clean` | Stop + remove project images |

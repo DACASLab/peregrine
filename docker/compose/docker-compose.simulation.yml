@@ -14,8 +14,6 @@ services:
         SIM_BASE_IMAGE: ${SIM_BASE_IMAGE:-nvcr.io/nvidia/cuda:12.5.1-cudnn-runtime-ubuntu22.04}
         ROS_DISTRO: ${ROS_DISTRO:-humble}
         PX4_VERSION: ${PX4_VERSION:-v1.16.1}
-        PX4_MSGS_BRANCH: ${PX4_MSGS_BRANCH:-release/1.16}
-        PX4_ROS_COM_BRANCH: ${PX4_ROS_COM_BRANCH:-main}
         ROS_WS: ${ROS_WS:-/ros2_ws}
         CONTAINER_USER: ${CONTAINER_USER:-peregrine}
         USER_UID: ${USER_UID:-1000}
@@ -32,6 +30,8 @@ services:
       - DISPLAY=${DISPLAY:-:0}
       - DRONE_ID=${DRONE_ID:-1}
       - ROS_LOCALHOST_ONLY=${ROS_LOCALHOST_ONLY:-1}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - ROS_WS=${ROS_WS:-/ros2_ws}
       - PX4_SIM_MODEL=${PX4_SIM_MODEL:-x500}
       - PX4_GZ_WORLD=${PX4_GZ_WORLD:-default}

@@ -9,27 +9,32 @@ COMPOSE_SIM    := -f compose/docker-compose.simulation.yml
 COMPOSE_JETSON := -f compose/docker-compose.jetson.yml
 COMPOSE_RPI5   := -f compose/docker-compose.rpi5.yml
 
+COMPOSE_ENV_FILES := --env-file .env
+ifneq ("$(wildcard .env.auth)","")
+COMPOSE_ENV_FILES += --env-file .env.auth
+endif
+
 # ── Build ────────────────────────────────────────────────────────────────────
 
 build-sim:
-	docker compose $(COMPOSE_SIM) build
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_SIM) build
 
 build-jetson:
-	docker compose $(COMPOSE_JETSON) build
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_JETSON) build
 
 build-rpi5:
-	docker compose $(COMPOSE_RPI5) build
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_RPI5) build
 
 build-all: build-sim build-jetson build-rpi5
 
 rebuild-sim:
-	docker compose $(COMPOSE_SIM) build --no-cache
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_SIM) build --no-cache
 
 rebuild-jetson:
-	docker compose $(COMPOSE_JETSON) build --no-cache
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_JETSON) build --no-cache
 
 rebuild-rpi5:
-	docker compose $(COMPOSE_RPI5) build --no-cache
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_RPI5) build --no-cache
 
 rebuild-all: rebuild-sim rebuild-jetson rebuild-rpi5
 
@@ -37,25 +42,25 @@ rebuild-all: rebuild-sim rebuild-jetson rebuild-rpi5
 
 sim:
 	xhost +local:docker 2>/dev/null || true
-	docker compose $(COMPOSE_SIM) up
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_SIM) up
 
 jetson:
-	docker compose $(COMPOSE_JETSON) up
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_JETSON) up
 
 rpi5:
-	docker compose $(COMPOSE_RPI5) up
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_RPI5) up
 
 # ── Dev shells (workspace is always mounted) ─────────────────────────────────
 
 dev:
 	xhost +local:docker 2>/dev/null || true
-	docker compose $(COMPOSE_SIM) run --rm sim bash
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_SIM) run --rm sim bash
 
 dev-jetson:
-	docker compose $(COMPOSE_JETSON) run --rm aircraft bash
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_JETSON) run --rm aircraft bash
 
 dev-rpi5:
-	docker compose $(COMPOSE_RPI5) run --rm aircraft bash
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_RPI5) run --rm aircraft bash
 
 # ── Shell into running container ─────────────────────────────────────────────
 
@@ -71,9 +76,9 @@ shell-rpi5:
 # ── Cleanup ──────────────────────────────────────────────────────────────────
 
 down:
-	docker compose $(COMPOSE_SIM) down 2>/dev/null || true
-	docker compose $(COMPOSE_JETSON) down 2>/dev/null || true
-	docker compose $(COMPOSE_RPI5) down 2>/dev/null || true
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_SIM) down 2>/dev/null || true
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_JETSON) down 2>/dev/null || true
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_RPI5) down 2>/dev/null || true
 
 clean: down
 	docker image rm -f \

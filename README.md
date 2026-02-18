@@ -10,7 +10,7 @@ peregrine/
 │   ├── peregrine_core/
 │   ├── peregrine_app_nav/   # app repo (submodule)
 │   ├── peregrine_app_vision/# app repo (submodule)
-│   └── px4_msgs/
+│   └── px4_msgs/            # PX4 messages (submodule)
 ├── docker/
 │   ├── docker/              # Dockerfiles
 │   ├── compose/             # compose stacks by target

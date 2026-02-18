@@ -14,7 +14,7 @@ This repo currently has two layers:
 
 Common behavior:
 
-1. `entrypoint.sh` sources ROS + PX4 message workspace + `${ROS_WS}` (default `/ros2_ws`).
+1. `entrypoint.sh` sources ROS + `${ROS_WS}` (default `/ros2_ws`).
 2. `DRONE_ID` is mapped to `ROS_DOMAIN_ID`.
 3. `ROS_LOCALHOST_ONLY` defaults to `1`.
 4. Jetson/RPi set `START_XRCE_AGENT=true` so MicroXRCEAgent starts automatically on default UDP settings.
@@ -29,7 +29,7 @@ src/
 ├── peregrine_core/     # base flight stack (core packages)
 ├── peregrine_app_<a>/  # app repo A (submodule)
 ├── peregrine_app_<b>/  # app repo B (submodule)
-└── px4_msgs/           # optional local fork/mirror
+└── px4_msgs/           # px4 message definitions (submodule)
 ```
 
 App repos should depend on `peregrine_core` interfaces/libs, not the reverse.

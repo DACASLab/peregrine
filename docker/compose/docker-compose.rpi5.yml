@@ -13,8 +13,6 @@ services:
       args:
         RPI_BASE_IMAGE: ${RPI_BASE_IMAGE:-ros:humble-ros-base-jammy}
         ROS_DISTRO: ${ROS_DISTRO:-humble}
-        PX4_MSGS_BRANCH: ${PX4_MSGS_BRANCH:-release/1.16}
-        PX4_ROS_COM_BRANCH: ${PX4_ROS_COM_BRANCH:-main}
         ROS_WS: ${ROS_WS:-/ros2_ws}
         CONTAINER_USER: ${CONTAINER_USER:-peregrine}
         USER_UID: ${USER_UID:-1000}
@@ -30,6 +28,8 @@ services:
     environment:
       - DRONE_ID=${DRONE_ID:-1}
       - ROS_LOCALHOST_ONLY=${ROS_LOCALHOST_ONLY:-1}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - ROS_WS=${ROS_WS:-/ros2_ws}
       - START_XRCE_AGENT=true
     volumes:

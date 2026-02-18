@@ -14,8 +14,6 @@ FROM ${SIM_BASE_IMAGE} AS simulation
 
 ARG ROS_DISTRO=humble
 ARG PX4_VERSION=v1.16.1
-ARG PX4_MSGS_BRANCH=release/1.16
-ARG PX4_ROS_COM_BRANCH=main
 ARG ROS_WS=/ros2_ws
 ARG CONTAINER_USER=peregrine
 ARG USER_UID=1000
@@ -108,27 +106,23 @@ RUN cd /opt/PX4-Autopilot \
     && make px4_sitl \
     && rm -rf build/px4_sitl_default/tmp
 
-# ── px4_msgs + px4_ros_com ───────────────────────────────────────────────────
-RUN mkdir -p /opt/px4_ws/src \
-    && cd /opt/px4_ws/src \
-    && git clone --depth 1 --branch ${PX4_MSGS_BRANCH} \
-        https://github.com/PX4/px4_msgs.git \
-    && git clone --depth 1 --branch ${PX4_ROS_COM_BRANCH} \
-        https://github.com/PX4/px4_ros_com.git
-
-RUN . /opt/ros/${ROS_DISTRO}/setup.sh \
-    && cd /opt/px4_ws \
-    && colcon build --symlink-install \
-        --cmake-args -DCMAKE_BUILD_TYPE=Release \
-        --event-handlers console_direct+
-
 RUN rosdep init 2>/dev/null || true
 
 # ── Python tooling ──────────────────────────────────────────────────────────
 RUN pip3 install --no-cache-dir \
         mavsdk pymavlink "setuptools==58.2.0"
+
+# ── AI agent CLIs (dev workflow) ───────────────────────────────────────────
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get update && apt-get install -y --no-install-recommends nodejs \
+    && npm install -g @openai/codex @anthropic-ai/claude-code \
+    && npm cache clean --force \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN gem install tmuxinator --no-document
+RUN curl -fsSL https://starship.rs/install.sh | sh -s -- -y
 COPY config/tmuxinator/peregrine.yml /tmp/peregrine-tmuxinator.yml
+COPY config/starship.toml /tmp/starship.toml
 
 # ── Create non-root development user (host UID/GID mapping) ────────────────
 RUN set -eux; \
@@ -140,12 +134,19 @@ RUN set -eux; \
     fi; \
     if ! getent group "${USER_GID}" > /dev/null 2>&1; then groupadd --gid "${USER_GID}" "${CONTAINER_USER}"; fi; \
     useradd -s /bin/bash --uid "${USER_UID}" --gid "${USER_GID}" -m "${CONTAINER_USER}"; \
-    usermod -aG sudo,dialout,video,plugdev,input "${CONTAINER_USER}"; \
+    EXTRA_GROUPS=""; \
+    for grp in sudo dialout video plugdev input; do \
+      if getent group "${grp}" > /dev/null 2>&1; then \
+        EXTRA_GROUPS="${EXTRA_GROUPS}${EXTRA_GROUPS:+,}${grp}"; \
+      fi; \
+    done; \
+    if [ -n "${EXTRA_GROUPS}" ]; then usermod -aG "${EXTRA_GROUPS}" "${CONTAINER_USER}"; fi; \
     echo "${CONTAINER_USER} ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/${CONTAINER_USER}"; \
     chmod 0440 "/etc/sudoers.d/${CONTAINER_USER}"; \
     mkdir -p "${ROS_WS}/src"; \
     mkdir -p "/home/${CONTAINER_USER}/.config/tmuxinator"; \
     cp /tmp/peregrine-tmuxinator.yml "/home/${CONTAINER_USER}/.config/tmuxinator/peregrine.yml"; \
+    cp /tmp/starship.toml "/home/${CONTAINER_USER}/.config/starship.toml"; \
     chown -R "${USER_UID}:${USER_GID}" "${ROS_WS}" "/home/${CONTAINER_USER}"
 
 # ── Config & entrypoint ─────────────────────────────────────────────────────
@@ -162,8 +163,9 @@ ENV PX4_HOME=/opt/PX4-Autopilot \
 RUN { \
     echo 'source /opt/ros/${ROS_DISTRO}/setup.bash'; \
     echo '[ -f /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash ] && source /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash'; \
-    echo 'source /opt/px4_ws/install/setup.bash'; \
     echo '[ -f ${ROS_WS}/install/setup.bash ] && source ${ROS_WS}/install/setup.bash'; \
+    echo 'export PATH="$HOME/.local/bin:$PATH"'; \
+    echo 'if command -v starship >/dev/null 2>&1; then eval "$(starship init bash)"; fi'; \
     echo 'export ROS_DOMAIN_ID=${DRONE_ID:-0}'; \
 } >> /home/${CONTAINER_USER}/.bashrc
 
