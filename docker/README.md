@@ -4,7 +4,7 @@ Multi-platform Docker solution for a ROS 2 / PX4 flight stack across three targe
 
 | Target | Hardware | Arch | Base Image | GPU | Use Case |
 |---|---|---|---|---|---|
-| **Simulation** | PC + NVIDIA GPU | amd64 | `nvcr.io/nvidia/cuda:12.5.1` | CUDA + OpenGL | Gazebo Harmonic + PX4 SITL |
+| **Simulation** | PC + NVIDIA GPU | amd64 | `nvcr.io/nvidia/cuda:12.5.1-cudnn-runtime-ubuntu22.04` | CUDA + OpenGL | Gazebo Harmonic + PX4 SITL |
 | **Jetson** | Orin Nano / NX | arm64 | `nvcr.io/nvidia/l4t-jetpack:r36.4.0` | CUDA + TensorRT | Onboard compute (real drone) |
 | **RPi5** | Raspberry Pi 5 | arm64 | `ros:humble-ros-base-jammy` | None | Lightweight companion computer |
 
@@ -76,7 +76,8 @@ git clone <your-repo-url> && cd peregrine/docker
 
 # ── Simulation (PC with NVIDIA GPU) ─────────────────────────
 make build-sim            # Build the image
-make sim                  # Run it (interactive, with GUI)
+make shell-sim            # Preferred persistent dev shell
+# make sim                # Alternative: run attached to compose logs
 
 # ── Jetson (on the Jetson itself) ────────────────────────────
 make build-jetson
@@ -115,14 +116,6 @@ docker compose -f compose/docker-compose.simulation.yml build
 docker compose -f compose/docker-compose.simulation.yml up
 ```
 
-Optional auth env file (auto-loaded by `make` if present):
-
-```bash
-cd docker
-cp .env.auth.example .env.auth
-# set OPENAI_API_KEY / ANTHROPIC_API_KEY
-```
-
 ### Inside the simulation container
 
 ```bash
@@ -142,14 +135,18 @@ ros2 topic list
 
 All target compose files mount the host repo root (`../../`) into `${ROS_WS}` (default `${ROS_WS}=/ros2_ws`) so you can edit in VS Code and build inside the container without image rebuilds:
 There is no separate dev-override compose file in the current design.
+The host auth directories `${HOME}/.codex` and `${HOME}/.claude` are also bind-mounted into the container user home so browser login state persists across container recreation.
 
 ```bash
-make dev        # simulation shell
-make dev-jetson # jetson shell
-make dev-rpi5   # rpi5 shell
+make shell-sim  # preferred persistent dev shell (auto-starts sim)
+make dev        # disposable simulation shell
+make shell-jetson # bash into running jetson service
+make shell-rpi5   # bash into running rpi5 service
+make dev-jetson   # disposable jetson shell
+make dev-rpi5     # disposable rpi5 shell
 ```
 
-The `dev*` targets open an interactive shell with the same mounted workspace:
+The `dev*` targets open disposable interactive shells with the same mounted workspace:
 
 ```bash
 docker compose -f compose/docker-compose.simulation.yml run --rm sim bash
@@ -170,21 +167,20 @@ ros2 run your_package your_node
 
 ## Day-to-Day Usage
 
-### `make sim` vs `make dev` vs `make shell-sim`
+### `make shell-sim` vs `make dev` vs `make sim`
 
-1. `make sim`
-   - Runs the `sim` service with `docker compose up`.
-   - Use when you want a long-running simulation container.
-   - Best for multi-terminal workflows (PX4, bridge, monitoring in parallel).
+1. `make shell-sim`
+   - Ensures `sim` is running (`docker compose up -d sim`) and then opens `bash` via `docker compose exec`.
+   - Best default for daily development when you want persistent state and easy multi-terminal work.
 
 2. `make dev`
    - Runs `docker compose run --rm sim bash`.
    - Use for a quick disposable shell (build/test commands, one-off debugging).
    - Container is removed when you exit the shell.
 
-3. `make shell-sim`
-   - Runs `docker exec` into an already running `sim` container.
-   - Use when `make sim` (or VS Code devcontainer) is already running and you need another terminal.
+3. `make sim`
+   - Runs `docker compose up` attached to service logs.
+   - Use when you explicitly want foreground service logs in that terminal.
 
 ### VS Code devcontainer behavior
 
@@ -202,8 +198,8 @@ ros2 run your_package your_node
 
 ```bash
 cd docker
-make sim
-# in another host terminal
+make shell-sim
+# optional: another shell in same container
 make shell-sim
 ```
 
@@ -227,25 +223,24 @@ colcon build --symlink-install
 
 ```bash
 cd docker
-make dev-jetson
-make dev-rpi5
+DRONE_ID=1 make jetson
+make shell-jetson
+DRONE_ID=1 make rpi5
+make shell-rpi5
 ```
 
 ### Using `codex` and `claude` in-container
 
 The simulation image installs both CLIs (`@openai/codex` and `@anthropic-ai/claude-code`).
+Auth is persisted via bind mounts from host `~/.codex` and `~/.claude`.
 
-Use API-key env auth with a local auth file:
+Use browser/device login in the container shell:
 
 ```bash
 cd docker
-cp .env.auth.example .env.auth
-# fill OPENAI_API_KEY and ANTHROPIC_API_KEY
-make sim
-# in another terminal
 make shell-sim
-codex --help
-claude --help
+codex login
+claude auth login
 ```
 
 ---
@@ -266,7 +261,7 @@ git commit -m "Add my_app_pkg"
 
 # 3. Run dev mode
 cd ../../docker
-make dev
+make shell-sim
 
 # 4. Build & test inside the container
 cd ${ROS_WS:-/ros2_ws} && colcon build --symlink-install
@@ -323,8 +318,7 @@ peregrine/
 │   └── px4_msgs/                      # PX4 message definitions (submodule)
 ├── docker/
 │   ├── .env                           # ★ Version pins
-│   ├── .env.auth.example              # Optional API-key auth template
-│   ├── Makefile                       # ★ make build-sim, make dev, etc.
+│   ├── Makefile                       # ★ make build-sim, make shell-sim, etc.
 │   ├── docker/
 │   │   ├── Dockerfile.simulation
 │   │   ├── Dockerfile.jetson
@@ -350,16 +344,11 @@ peregrine/
 | `ROS_LOCALHOST_ONLY` | `1` | All | Restrict DDS traffic to localhost |
 | `PX4_SIM_MODEL` | `x500` | Sim | Gazebo vehicle model |
 | `PX4_GZ_WORLD` | `default` | Sim | Gazebo world file |
-| `HEADLESS` | `false` | Sim | Run Gazebo headless |
+| `HEADLESS` | `false` | Sim | Reserved for future headless flow (not used in current compose files) |
 | `ROS_WS` | `/ros2_ws` | All | ROS 2 workspace path inside container |
 | `CONTAINER_USER` | `peregrine` | All | Non-root username inside container |
 | `USER_UID` | `1000` | All | Host UID to map container user |
 | `USER_GID` | `1000` | All | Host GID to map container user |
-
-Optional `docker/.env.auth` (not committed):
-
-1. `OPENAI_API_KEY` for `codex`
-2. `ANTHROPIC_API_KEY` for `claude`
 
 ---
 
@@ -378,12 +367,16 @@ Optional `docker/.env.auth` (not committed):
 | `make sim` | Run simulation (interactive, GUI) |
 | `make jetson` | Run Jetson container |
 | `make rpi5` | Run RPi5 container |
-| `make dev` | Sim interactive shell |
-| `make dev-jetson` | Jetson interactive shell |
-| `make dev-rpi5` | RPi5 interactive shell |
-| `make shell-sim` | Exec bash into running sim container |
+| `make dev` | Sim disposable shell (`run --rm`) |
+| `make dev-jetson` | Jetson disposable shell (`run --rm`) |
+| `make dev-rpi5` | RPi5 disposable shell (`run --rm`) |
+| `make shell-sim` | Start sim if needed and open bash |
+| `make shell-jetson` | Exec bash into running jetson container |
+| `make shell-rpi5` | Exec bash into running rpi5 container |
 | `make down` | Stop all containers |
 | `make clean` | Stop + remove project images |
+| `make nuke` | Aggressive prune (`docker system prune -af --volumes`) |
+| `make info` | Print effective `.env` config values |
 
 ---
 

@@ -10,9 +10,6 @@ COMPOSE_JETSON := -f compose/docker-compose.jetson.yml
 COMPOSE_RPI5   := -f compose/docker-compose.rpi5.yml
 
 COMPOSE_ENV_FILES := --env-file .env
-ifneq ("$(wildcard .env.auth)","")
-COMPOSE_ENV_FILES += --env-file .env.auth
-endif
 
 # ── Build ────────────────────────────────────────────────────────────────────
 

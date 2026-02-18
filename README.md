@@ -27,11 +27,12 @@ Run commands from `docker/`:
 ```bash
 cd docker
 make build-sim
-make dev
+make shell-sim
 ```
 
 All targets mount the entire repo workspace into `${ROS_WS}` (`ROS_WS` default: `/ros2_ws`), so code and `colcon` artifacts persist on host.
-`make dev` opens a disposable shell; use `make sim` / `make jetson` / `make rpi5` for long-running services.
+`make shell-sim` is the preferred persistent dev shell; `make dev` is disposable (`run --rm`).
+Use `make sim` / `make jetson` / `make rpi5` when you want attached service logs in the terminal.
 Containers run as a non-root user mapped to host UID/GID (`CONTAINER_USER`, `USER_UID`, `USER_GID` in `docker/.env`).
 
 ## Repo management

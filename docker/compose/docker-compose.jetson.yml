@@ -29,12 +29,12 @@ services:
     environment:
       - DRONE_ID=${DRONE_ID:-1}
       - ROS_LOCALHOST_ONLY=${ROS_LOCALHOST_ONLY:-1}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - ROS_WS=${ROS_WS:-/ros2_ws}
       - START_XRCE_AGENT=true
     volumes:
       - ../../:${ROS_WS:-/ros2_ws}:rw
+      - ${HOME}/.codex:/home/${CONTAINER_USER:-peregrine}/.codex:rw
+      - ${HOME}/.claude:/home/${CONTAINER_USER:-peregrine}/.claude:rw
     devices:
       - /dev/ttyTHS0:/dev/ttyTHS0      # UART to Pixhawk (adjust as needed)
       - /dev/ttyUSB0:/dev/ttyUSB0      # USB serial (if used)

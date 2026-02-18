@@ -1,6 +1,5 @@
 .vscode/
 .old_devcontainer/
-docker/.env.auth
 
 # ROS 2 / colcon build artifacts
 build/

@@ -78,10 +78,15 @@ Run from `docker/`:
 
 ```bash
 make build-sim
-make sim
+make shell-sim
+# optional disposable shell:
 make dev
+
 make build-jetson
 DRONE_ID=1 make jetson
+make shell-jetson
+
 make build-rpi5
 DRONE_ID=1 make rpi5
+make shell-rpi5
 ```
