@@ -16,8 +16,9 @@ Common behavior:
 
 1. `entrypoint.sh` sources ROS + PX4 message workspace + `${ROS_WS}` (default `/ros2_ws`).
 2. `DRONE_ID` is mapped to `ROS_DOMAIN_ID`.
-3. Jetson/RPi set `START_XRCE_AGENT=true` so MicroXRCEAgent starts automatically.
-4. Containers run as non-root user mapped to host UID/GID for bind-mount ownership.
+3. `ROS_LOCALHOST_ONLY` defaults to `1`.
+4. Jetson/RPi set `START_XRCE_AGENT=true` so MicroXRCEAgent starts automatically on default UDP settings.
+5. Containers run as non-root user mapped to host UID/GID for bind-mount ownership.
 
 ## Recommended source layout
 
@@ -47,27 +48,15 @@ git submodule add <app-repo-url> src/peregrine_app_<name>
 git commit -m "Add app submodule: peregrine_app_<name>"
 ```
 
-## Recommended image layering for GHCR
+## Current image naming
 
-Use one repository per image family with target and feature tags.
+For now, builds are local-only and intentionally simple:
 
-1. Base target image:
-   - `ghcr.io/<org>/peregrine-base:sim`
-   - `ghcr.io/<org>/peregrine-base:jetson`
-   - `ghcr.io/<org>/peregrine-base:rpi5`
-2. Core stack image (adds `peregrine_core`, built binaries):
-   - `ghcr.io/<org>/peregrine-core:sim`
-   - `ghcr.io/<org>/peregrine-core:jetson`
-   - `ghcr.io/<org>/peregrine-core:rpi5`
-3. App image (extends core and adds app repos):
-   - `ghcr.io/<org>/peregrine-app-<name>:sim`
-   - `ghcr.io/<org>/peregrine-app-<name>:jetson`
-   - `ghcr.io/<org>/peregrine-app-<name>:rpi5`
-4. Vision feature variant (optional):
-   - `...:jetson-vision`
-   - `...:sim-vision`
+1. `ros2-px4-flight-simulation:latest`
+2. `ros2-px4-flight-jetson:latest`
+3. `ros2-px4-flight-rpi5:latest`
 
-Keep `vision` as a tag or dedicated Dockerfile variant so non-vision deployments stay smaller.
+These names are derived from `PROJECT_NAME` in `docker/.env`.
 
 ## VS Code workflow
 

@@ -4,7 +4,7 @@ Multi-platform Docker solution for a ROS 2 / PX4 flight stack across three targe
 
 | Target | Hardware | Arch | Base Image | GPU | Use Case |
 |---|---|---|---|---|---|
-| **Simulation** | PC + NVIDIA GPU | amd64 | `nvcr.io/nvidia/cuda:12.8.1` | CUDA + OpenGL | Gazebo Harmonic + PX4 SITL |
+| **Simulation** | PC + NVIDIA GPU | amd64 | `nvcr.io/nvidia/cuda:12.5.1` | CUDA + OpenGL | Gazebo Harmonic + PX4 SITL |
 | **Jetson** | Orin Nano / NX | arm64 | `nvcr.io/nvidia/l4t-jetpack:r36.4.0` | CUDA + TensorRT | Onboard compute (real drone) |
 | **RPi5** | Raspberry Pi 5 | arm64 | `ros:humble-ros-base-jammy` | None | Lightweight companion computer |
 
@@ -188,6 +188,7 @@ ros2 run your_package your_node
 ### Recommended flows
 
 1. GUI sim + multiple terminals (CLI):
+
 ```bash
 cd docker
 make sim
@@ -196,12 +197,14 @@ make shell-sim
 ```
 
 2. Quick command-only iteration:
+
 ```bash
 cd docker
 make dev
 ```
 
 3. VS Code-first workflow:
+
 ```bash
 # Open repo in VS Code -> Reopen in Container
 # Then inside integrated terminal:
@@ -210,6 +213,7 @@ colcon build --symlink-install
 ```
 
 4. Hardware shells:
+
 ```bash
 cd docker
 make dev-jetson
@@ -265,12 +269,12 @@ All version pins live in `.env`. Edit and rebuild:
 
 ```bash
 # Upgrade PX4
-# .env → PX4_VERSION=v1.16.0
+# .env → PX4_VERSION=v1.16.1
 make build-sim
 
 # Switch ROS 2 distro (Humble → Jazzy)
 # .env → ROS_DISTRO=jazzy
-# .env → SIM_BASE_IMAGE=nvcr.io/nvidia/cuda:12.8.1-cudnn-runtime-ubuntu24.04
+# .env → SIM_BASE_IMAGE=nvcr.io/nvidia/cuda:12.5.1-cudnn-runtime-ubuntu24.04
 # .env → RPI_BASE_IMAGE=ros:jazzy-ros-base-noble
 make build-all
 
@@ -312,14 +316,15 @@ peregrine/
 | Variable | Default | Where | Description |
 |---|---|---|---|
 | `ROS_DISTRO` | `humble` | All | ROS 2 distribution |
-| `PX4_VERSION` | `v1.15.4` | Sim | PX4 firmware tag for SITL |
+| `PX4_VERSION` | `v1.16.1` | Sim | PX4 firmware tag for SITL |
+| `PX4_MSGS_BRANCH` | `release/1.16` | All | `px4_msgs` branch to build in `/opt/px4_ws` |
+| `PX4_ROS_COM_BRANCH` | `main` | All | `px4_ros_com` branch to build in `/opt/px4_ws` |
 | `DRONE_ID` | `1` | All | Sets `ROS_DOMAIN_ID` |
+| `ROS_LOCALHOST_ONLY` | `1` | All | Restrict DDS traffic to localhost |
 | `PX4_SIM_MODEL` | `x500` | Sim | Gazebo vehicle model |
 | `PX4_GZ_WORLD` | `default` | Sim | Gazebo world file |
 | `HEADLESS` | `false` | Sim | Run Gazebo headless |
 | `ROS_WS` | `/ros2_ws` | All | ROS 2 workspace path inside container |
-| `XRCE_DDS_PORT` | `8888` | All | XRCE-DDS Agent UDP port |
-| `START_XRCE_AGENT` | `false` | Deploy | Auto-start XRCE-DDS agent on boot |
 | `CONTAINER_USER` | `peregrine` | All | Non-root username inside container |
 | `USER_UID` | `1000` | All | Host UID to map container user |
 | `USER_GID` | `1000` | All | Host GID to map container user |
@@ -334,6 +339,10 @@ peregrine/
 | `make build-jetson` | Build Jetson image |
 | `make build-rpi5` | Build RPi5 image |
 | `make build-all` | Build all images |
+| `make rebuild-sim` | Rebuild sim image with no cache |
+| `make rebuild-jetson` | Rebuild Jetson image with no cache |
+| `make rebuild-rpi5` | Rebuild RPi5 image with no cache |
+| `make rebuild-all` | Rebuild all images with no cache |
 | `make sim` | Run simulation (interactive, GUI) |
 | `make jetson` | Run Jetson container |
 | `make rpi5` | Run RPi5 container |

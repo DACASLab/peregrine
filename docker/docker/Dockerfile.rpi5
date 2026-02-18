@@ -13,8 +13,7 @@ ARG RPI_BASE_IMAGE=ros:humble-ros-base-jammy
 FROM ${RPI_BASE_IMAGE} AS rpi5
 
 ARG ROS_DISTRO=humble
-ARG XRCE_DDS_VERSION=v2.4.3
-ARG PX4_MSGS_BRANCH=main
+ARG PX4_MSGS_BRANCH=release/1.16
 ARG PX4_ROS_COM_BRANCH=main
 ARG ROS_WS=/ros2_ws
 ARG CONTAINER_USER=peregrine
@@ -51,8 +50,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Micro-XRCE-DDS Agent ────────────────────────────────────────────────────
-RUN git clone --depth 1 --branch ${XRCE_DDS_VERSION} \
-        https://github.com/eProsima/Micro-XRCE-DDS-Agent.git /tmp/xrce \
+RUN git clone --depth 1 https://github.com/eProsima/Micro-XRCE-DDS-Agent.git /tmp/xrce \
     && cd /tmp/xrce && mkdir build && cd build \
     && cmake .. -DCMAKE_BUILD_TYPE=Release \
     && make -j$(nproc) && make install && ldconfig \

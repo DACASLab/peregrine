@@ -76,4 +76,4 @@ See `docs/WORKSPACE_AND_IMAGE_STRATEGY.md` for:
 
 1. Sim vs Jetson vs RPi behavior
 2. Core vs app package layout
-3. GHCR image layering and suggested tags (including optional `vision` variants)
+3. Current local image naming and operational workflow

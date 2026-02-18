@@ -18,11 +18,12 @@ fi
 
 # ── Set ROS_DOMAIN_ID from DRONE_ID ───────────────────────────
 export ROS_DOMAIN_ID=${DRONE_ID:-0}
+export ROS_LOCALHOST_ONLY=${ROS_LOCALHOST_ONLY:-1}
 
 # ── Start Micro-XRCE-DDS Agent if requested ───────────────────
 if [ "${START_XRCE_AGENT:-false}" = "true" ]; then
-    echo "[entrypoint] Starting Micro-XRCE-DDS Agent on UDP port ${XRCE_DDS_PORT:-8888}..."
-    MicroXRCEAgent udp4 -p "${XRCE_DDS_PORT:-8888}" &
+    echo "[entrypoint] Starting Micro-XRCE-DDS Agent on default UDP port..."
+    MicroXRCEAgent udp4 -p 8888 &
 fi
 
 # ── Execute the command passed to the container ────────────────

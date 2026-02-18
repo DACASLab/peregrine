@@ -9,13 +9,12 @@
 #   — or —
 #   docker build -f docker/Dockerfile.simulation -t sim:latest .
 ###############################################################################
-ARG SIM_BASE_IMAGE=nvcr.io/nvidia/cuda:12.8.1-cudnn-runtime-ubuntu22.04
+ARG SIM_BASE_IMAGE=nvcr.io/nvidia/cuda:12.5.1-cudnn-runtime-ubuntu22.04
 FROM ${SIM_BASE_IMAGE} AS simulation
 
 ARG ROS_DISTRO=humble
-ARG XRCE_DDS_VERSION=v2.4.3
-ARG PX4_VERSION=v1.15.4
-ARG PX4_MSGS_BRANCH=main
+ARG PX4_VERSION=v1.16.1
+ARG PX4_MSGS_BRANCH=release/1.16
 ARG PX4_ROS_COM_BRANCH=main
 ARG ROS_WS=/ros2_ws
 ARG CONTAINER_USER=peregrine
@@ -90,8 +89,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Micro-XRCE-DDS Agent ────────────────────────────────────────────────────
-RUN git clone --depth 1 --branch ${XRCE_DDS_VERSION} \
-        https://github.com/eProsima/Micro-XRCE-DDS-Agent.git /tmp/xrce \
+RUN git clone --depth 1 https://github.com/eProsima/Micro-XRCE-DDS-Agent.git /tmp/xrce \
     && cd /tmp/xrce && mkdir build && cd build \
     && cmake .. -DCMAKE_BUILD_TYPE=Release \
     && make -j$(nproc) && make install && ldconfig \
