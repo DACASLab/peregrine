@@ -65,13 +65,15 @@ dev-rpi5:
 # ── Shell into running container ─────────────────────────────────────────────
 
 shell-sim:
-	docker exec -it $(PROJECT_NAME)-sim bash
+	xhost +local:docker 2>/dev/null || true
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_SIM) up -d sim
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_SIM) exec sim bash
 
 shell-jetson:
-	docker exec -it $(PROJECT_NAME)-aircraft-$(DRONE_ID) bash
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_JETSON) exec aircraft bash
 
 shell-rpi5:
-	docker exec -it $(PROJECT_NAME)-aircraft-$(DRONE_ID) bash
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_RPI5) exec aircraft bash
 
 # ── Cleanup ──────────────────────────────────────────────────────────────────
 
