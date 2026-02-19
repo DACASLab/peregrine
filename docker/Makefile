@@ -24,16 +24,16 @@ build-rpi5:
 
 build-all: build-sim build-jetson build-rpi5
 
-rebuild-sim:
+build-sim-nocache:
 	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_SIM) build --no-cache
 
-rebuild-jetson:
+build-jetson-nocache:
 	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_JETSON) build --no-cache
 
-rebuild-rpi5:
+build-rpi5-nocache:
 	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_RPI5) build --no-cache
 
-rebuild-all: rebuild-sim rebuild-jetson rebuild-rpi5
+build-all-nocache: build-sim-nocache build-jetson-nocache build-rpi5-nocache
 
 # ── Run ──────────────────────────────────────────────────────────────────────
 
@@ -101,7 +101,7 @@ info:
 	@echo "User:         $(CONTAINER_USER) ($(USER_UID):$(USER_GID))"
 
 .PHONY: build-sim build-jetson build-rpi5 build-all \
-        rebuild-sim rebuild-jetson rebuild-rpi5 rebuild-all \
+        build-sim-nocache build-jetson-nocache build-rpi5-nocache build-all-nocache \
         sim jetson rpi5 dev dev-jetson dev-rpi5 \
         shell-sim shell-jetson shell-rpi5 \
         down clean nuke info

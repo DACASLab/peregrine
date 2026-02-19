@@ -75,7 +75,8 @@ sudo systemctl restart docker
 git clone <your-repo-url> && cd peregrine/docker
 
 # ── Simulation (PC with NVIDIA GPU) ─────────────────────────
-make build-sim            # Build the image
+make build-sim            # Build image (uses Docker cache)
+make build-sim-nocache    # Force clean rebuild
 make shell-sim            # Preferred persistent dev shell
 # make sim                # Alternative: run attached to compose logs
 
@@ -360,10 +361,10 @@ peregrine/
 | `make build-jetson` | Build Jetson image |
 | `make build-rpi5` | Build RPi5 image |
 | `make build-all` | Build all images |
-| `make rebuild-sim` | Rebuild sim image with no cache |
-| `make rebuild-jetson` | Rebuild Jetson image with no cache |
-| `make rebuild-rpi5` | Rebuild RPi5 image with no cache |
-| `make rebuild-all` | Rebuild all images with no cache |
+| `make build-sim-nocache` | Build sim image with `--no-cache` |
+| `make build-jetson-nocache` | Build Jetson image with `--no-cache` |
+| `make build-rpi5-nocache` | Build RPi5 image with `--no-cache` |
+| `make build-all-nocache` | Build all images with `--no-cache` |
 | `make sim` | Run simulation (interactive, GUI) |
 | `make jetson` | Run Jetson container |
 | `make rpi5` | Run RPi5 container |

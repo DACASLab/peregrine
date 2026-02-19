@@ -32,58 +32,58 @@ RUN apt-get update && apt-get install -y locales \
 
 # ── ROS2 apt repository ─────────────────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        software-properties-common curl gnupg2 lsb-release ca-certificates \
+    software-properties-common curl gnupg2 lsb-release ca-certificates \
     && add-apt-repository universe \
     && curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
-        -o /usr/share/keyrings/ros-archive-keyring.gpg \
+    -o /usr/share/keyrings/ros-archive-keyring.gpg \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] \
-        http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" \
-        > /etc/apt/sources.list.d/ros2.list \
+    http://packages.ros.org/ros2/ubuntu $(lsb_release -cs) main" \
+    > /etc/apt/sources.list.d/ros2.list \
     && rm -rf /var/lib/apt/lists/*
 
 # ── System + ROS2 desktop-full ───────────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        build-essential cmake git wget \
-        python3-pip python3-colcon-common-extensions python3-rosdep \
-        python3-vcstool python3-jinja2 python3-numpy python3-empy \
-        python3-toml python3-packaging python3-jsonschema \
-        tmux htop nano net-tools iputils-ping iproute2 gdb sudo \
-        bash-completion ruby-full \
-        # Display / GUI
-        mesa-utils libgl1-mesa-dri libglx-mesa0 libglu1-mesa-dev \
-        xauth x11-xserver-utils dbus-x11 \
-        # ROS2 desktop-full
-        ros-${ROS_DISTRO}-desktop-full \
-        ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
-        ros-${ROS_DISTRO}-rmw-fastrtps-cpp \
-        ros-${ROS_DISTRO}-geographic-msgs \
-        ros-${ROS_DISTRO}-tf2-ros \
-        ros-${ROS_DISTRO}-tf2-geometry-msgs \
-        ros-${ROS_DISTRO}-eigen3-cmake-module \
-        ros-${ROS_DISTRO}-diagnostic-updater \
-        ros-${ROS_DISTRO}-robot-localization \
-        ros-${ROS_DISTRO}-image-transport \
-        ros-${ROS_DISTRO}-cv-bridge \
-        ros-${ROS_DISTRO}-vision-opencv \
-        ros-${ROS_DISTRO}-plotjuggler-ros \
-        ros-${ROS_DISTRO}-launch-testing-ament-cmake \
+    build-essential cmake git wget \
+    python3-pip python3-colcon-common-extensions python3-rosdep \
+    python3-vcstool python3-jinja2 python3-numpy python3-empy \
+    python3-toml python3-packaging python3-jsonschema \
+    tmux htop nano net-tools iputils-ping iproute2 gdb sudo \
+    bash-completion ruby-full \
+    # Display / GUI
+    mesa-utils libgl1-mesa-dri libglx-mesa0 libglu1-mesa-dev \
+    xauth x11-xserver-utils dbus-x11 \
+    # ROS2 desktop-full
+    ros-${ROS_DISTRO}-desktop-full \
+    ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
+    ros-${ROS_DISTRO}-rmw-fastrtps-cpp \
+    ros-${ROS_DISTRO}-geographic-msgs \
+    ros-${ROS_DISTRO}-tf2-ros \
+    ros-${ROS_DISTRO}-tf2-geometry-msgs \
+    ros-${ROS_DISTRO}-eigen3-cmake-module \
+    ros-${ROS_DISTRO}-diagnostic-updater \
+    ros-${ROS_DISTRO}-robot-localization \
+    ros-${ROS_DISTRO}-image-transport \
+    ros-${ROS_DISTRO}-cv-bridge \
+    ros-${ROS_DISTRO}-vision-opencv \
+    ros-${ROS_DISTRO}-plotjuggler-ros \
+    ros-${ROS_DISTRO}-launch-testing-ament-cmake \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Gazebo Harmonic ──────────────────────────────────────────────────────────
 RUN wget https://packages.osrfoundation.org/gazebo.gpg \
-        -O /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg \
+    -O /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg \
     && echo "deb [arch=$(dpkg --print-architecture) \
-        signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] \
-        http://packages.osrfoundation.org/gazebo/ubuntu-stable \
-        $(lsb_release -cs) main" \
-        > /etc/apt/sources.list.d/gazebo-stable.list \
+    signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] \
+    http://packages.osrfoundation.org/gazebo/ubuntu-stable \
+    $(lsb_release -cs) main" \
+    > /etc/apt/sources.list.d/gazebo-stable.list \
     && apt-get update && apt-get install -y --no-install-recommends \
-        gz-harmonic \
+    gz-harmonic \
     && rm -rf /var/lib/apt/lists/*
 
 # ROS2 ↔ Gazebo bridge
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ros-${ROS_DISTRO}-ros-gzharmonic \
+    ros-${ROS_DISTRO}-ros-gzharmonic \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Micro-XRCE-DDS Agent ────────────────────────────────────────────────────
@@ -93,24 +93,53 @@ RUN git clone --depth 1 https://github.com/eProsima/Micro-XRCE-DDS-Agent.git /tm
     && make -j$(nproc) && make install && ldconfig \
     && rm -rf /tmp/xrce
 
-# ── PX4 Autopilot (SITL) ────────────────────────────────────────────────────
+# # ── Python tooling ──────────────────────────────────────────────────────────
+# RUN pip3 install --no-cache-dir \
+#     mavsdk pymavlink "setuptools==58.2.0"
+
+# ── Create non-root development user (host UID/GID mapping) ────────────────
+RUN set -eux; \
+    if getent passwd ubuntu > /dev/null 2>&1; then userdel -r ubuntu; fi; \
+    if getent passwd "${CONTAINER_USER}" > /dev/null 2>&1; then userdel -r "${CONTAINER_USER}"; fi; \
+    if getent passwd "${USER_UID}" > /dev/null 2>&1; then \
+    EXISTING_UID_USER="$(getent passwd "${USER_UID}" | cut -d: -f1)"; \
+    userdel -r "${EXISTING_UID_USER}" || true; \
+    fi; \
+    if ! getent group "${USER_GID}" > /dev/null 2>&1; then groupadd --gid "${USER_GID}" "${CONTAINER_USER}"; fi; \
+    useradd -s /bin/bash --uid "${USER_UID}" --gid "${USER_GID}" -m "${CONTAINER_USER}"; \
+    EXTRA_GROUPS=""; \
+    for grp in sudo dialout video plugdev input; do \
+    if getent group "${grp}" > /dev/null 2>&1; then \
+    EXTRA_GROUPS="${EXTRA_GROUPS}${EXTRA_GROUPS:+,}${grp}"; \
+    fi; \
+    done; \
+    if [ -n "${EXTRA_GROUPS}" ]; then usermod -aG "${EXTRA_GROUPS}" "${CONTAINER_USER}"; fi; \
+    echo "${CONTAINER_USER} ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/${CONTAINER_USER}"; \
+    chmod 0440 "/etc/sudoers.d/${CONTAINER_USER}"; \
+    mkdir -p "${ROS_WS}/src"; \
+    mkdir -p /opt/PX4-Autopilot; \
+    mkdir -p "/home/${CONTAINER_USER}/.config/tmuxinator"; \
+    chown -R "${USER_UID}:${USER_GID}" "${ROS_WS}" "/home/${CONTAINER_USER}" /opt/PX4-Autopilot
+
+
+# ── PX4 Autopilot (SITL): clone/setup/build as non-root user ───────────────
+USER ${CONTAINER_USER}
+
 RUN git clone --depth 1 --branch ${PX4_VERSION} --recursive \
-        https://github.com/PX4/PX4-Autopilot.git /opt/PX4-Autopilot
+    https://github.com/PX4/PX4-Autopilot.git /opt/PX4-Autopilot
 
 RUN cd /opt/PX4-Autopilot \
-    && bash ./Tools/setup/ubuntu.sh --no-nuttx --no-sim-tools \
-    && rm -rf /var/lib/apt/lists/*
+    && bash ./Tools/setup/ubuntu.sh --no-nuttx \
+    && sudo rm -rf /var/lib/apt/lists/*
 
 # Pre-build SITL target (big time saver on first run)
 RUN cd /opt/PX4-Autopilot \
     && make px4_sitl \
     && rm -rf build/px4_sitl_default/tmp
 
-RUN rosdep init 2>/dev/null || true
+# Return to root for final image configuration
+USER root
 
-# ── Python tooling ──────────────────────────────────────────────────────────
-RUN pip3 install --no-cache-dir \
-        mavsdk pymavlink "setuptools==58.2.0"
 
 # ── AI agent CLIs (dev workflow) ───────────────────────────────────────────
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
@@ -124,30 +153,17 @@ RUN curl -fsSL https://starship.rs/install.sh | sh -s -- -y
 COPY config/tmuxinator/peregrine.yml /tmp/peregrine-tmuxinator.yml
 COPY config/starship.toml /tmp/starship.toml
 
-# ── Create non-root development user (host UID/GID mapping) ────────────────
 RUN set -eux; \
-    if getent passwd ubuntu > /dev/null 2>&1; then userdel -r ubuntu; fi; \
-    if getent passwd "${CONTAINER_USER}" > /dev/null 2>&1; then userdel -r "${CONTAINER_USER}"; fi; \
-    if getent passwd "${USER_UID}" > /dev/null 2>&1; then \
-      EXISTING_UID_USER="$(getent passwd "${USER_UID}" | cut -d: -f1)"; \
-      userdel -r "${EXISTING_UID_USER}" || true; \
-    fi; \
-    if ! getent group "${USER_GID}" > /dev/null 2>&1; then groupadd --gid "${USER_GID}" "${CONTAINER_USER}"; fi; \
-    useradd -s /bin/bash --uid "${USER_UID}" --gid "${USER_GID}" -m "${CONTAINER_USER}"; \
-    EXTRA_GROUPS=""; \
-    for grp in sudo dialout video plugdev input; do \
-      if getent group "${grp}" > /dev/null 2>&1; then \
-        EXTRA_GROUPS="${EXTRA_GROUPS}${EXTRA_GROUPS:+,}${grp}"; \
-      fi; \
-    done; \
-    if [ -n "${EXTRA_GROUPS}" ]; then usermod -aG "${EXTRA_GROUPS}" "${CONTAINER_USER}"; fi; \
-    echo "${CONTAINER_USER} ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/${CONTAINER_USER}"; \
-    chmod 0440 "/etc/sudoers.d/${CONTAINER_USER}"; \
-    mkdir -p "${ROS_WS}/src"; \
     mkdir -p "/home/${CONTAINER_USER}/.config/tmuxinator"; \
     cp /tmp/peregrine-tmuxinator.yml "/home/${CONTAINER_USER}/.config/tmuxinator/peregrine.yml"; \
     cp /tmp/starship.toml "/home/${CONTAINER_USER}/.config/starship.toml"; \
-    chown -R "${USER_UID}:${USER_GID}" "${ROS_WS}" "/home/${CONTAINER_USER}"
+    chown "${USER_UID}:${USER_GID}" \
+    "/home/${CONTAINER_USER}/.config/tmuxinator/peregrine.yml" \
+    "/home/${CONTAINER_USER}/.config/starship.toml"
+
+
+
+RUN rosdep init 2>/dev/null || true
 
 # ── Config & entrypoint ─────────────────────────────────────────────────────
 COPY config/entrypoint.sh /entrypoint.sh
@@ -167,7 +183,16 @@ RUN { \
     echo 'export PATH="$HOME/.local/bin:$PATH"'; \
     echo 'if command -v starship >/dev/null 2>&1; then eval "$(starship init bash)"; fi'; \
     echo 'export ROS_DOMAIN_ID=${DRONE_ID:-0}'; \
-} >> /home/${CONTAINER_USER}/.bashrc
+    echo ''; \
+    echo 'sim_nuke() {'; \
+    echo '  local pat="px4_sitl_default/bin/px4|(^|/)(gz|gzserver|gzclient)([[:space:]]|$)"'; \
+    echo '  pkill -TERM -f "$pat" 2>/dev/null || true'; \
+    echo '  sleep 1'; \
+    echo '  pkill -KILL -f "$pat" 2>/dev/null || true'; \
+    echo '  pgrep -af "$pat" || echo "[sim_nuke] clean"'; \
+    echo '}'; \
+    echo "alias sim-nuke='sim_nuke'"; \
+    } >> /home/${CONTAINER_USER}/.bashrc
 
 USER ${CONTAINER_USER}
 WORKDIR ${ROS_WS}
