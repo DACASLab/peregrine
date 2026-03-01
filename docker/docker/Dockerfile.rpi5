@@ -20,8 +20,14 @@ ARG USER_GID=1000
 
 ENV DEBIAN_FRONTEND=noninteractive \
     TZ=UTC \
+    ROS_DISTRO=${ROS_DISTRO} \
+    LANG=en_US.UTF-8 \
     ROS_WS=${ROS_WS} \
     CONTAINER_USER=${CONTAINER_USER}
+
+# ── Locale ───────────────────────────────────────────────────────────────────
+RUN apt-get update && apt-get install -y locales \
+    && locale-gen en_US.UTF-8 && update-locale LC_ALL=en_US.UTF-8
 
 # ── System packages (keep minimal for Pi) ────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -42,6 +48,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ros-${ROS_DISTRO}-geographic-msgs \
         ros-${ROS_DISTRO}-tf2-ros \
         ros-${ROS_DISTRO}-tf2-geometry-msgs \
+        ros-${ROS_DISTRO}-eigen3-cmake-module \
         ros-${ROS_DISTRO}-diagnostic-updater \
         ros-${ROS_DISTRO}-robot-localization \
         ros-${ROS_DISTRO}-launch-testing-ament-cmake \
@@ -62,6 +69,7 @@ RUN pip3 install --no-cache-dir \
 RUN gem install tmuxinator --no-document
 RUN curl -fsSL https://starship.rs/install.sh | sh -s -- -y
 COPY config/tmuxinator/peregrine.yml /tmp/peregrine-tmuxinator.yml
+COPY config/tmuxinator/flight.yml /tmp/flight-tmuxinator.yml
 COPY config/starship.toml /tmp/starship.toml
 
 # ── Create non-root development user (host UID/GID mapping) ────────────────
@@ -86,6 +94,7 @@ RUN set -eux; \
     mkdir -p "${ROS_WS}/src"; \
     mkdir -p "/home/${CONTAINER_USER}/.config/tmuxinator"; \
     cp /tmp/peregrine-tmuxinator.yml "/home/${CONTAINER_USER}/.config/tmuxinator/peregrine.yml"; \
+    cp /tmp/flight-tmuxinator.yml "/home/${CONTAINER_USER}/.config/tmuxinator/flight.yml"; \
     cp /tmp/starship.toml "/home/${CONTAINER_USER}/.config/starship.toml"; \
     chown -R "${USER_UID}:${USER_GID}" "${ROS_WS}" "/home/${CONTAINER_USER}"
 

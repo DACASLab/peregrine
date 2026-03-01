@@ -1,0 +1,21 @@
+[Unit]
+Description=Peregrine Flight Stack
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/peregrine/peregrine/docker
+Environment=DRONE_ID=1
+EnvironmentFile=-/home/peregrine/peregrine/docker/.env.local
+
+ExecStart=docker compose --env-file .env -f compose/docker-compose.jetson.yml up aircraft
+ExecStop=docker compose --env-file .env -f compose/docker-compose.jetson.yml down
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=120
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

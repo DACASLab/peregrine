@@ -102,6 +102,7 @@ RUN pip3 install --no-cache-dir \
 RUN gem install tmuxinator --no-document
 RUN curl -fsSL https://starship.rs/install.sh | sh -s -- -y
 COPY config/tmuxinator/peregrine.yml /tmp/peregrine-tmuxinator.yml
+COPY config/tmuxinator/flight.yml /tmp/flight-tmuxinator.yml
 COPY config/starship.toml /tmp/starship.toml
 
 # ── Create non-root development user (host UID/GID mapping) ────────────────
@@ -126,6 +127,7 @@ RUN set -eux; \
     mkdir -p "${ROS_WS}/src"; \
     mkdir -p "/home/${CONTAINER_USER}/.config/tmuxinator"; \
     cp /tmp/peregrine-tmuxinator.yml "/home/${CONTAINER_USER}/.config/tmuxinator/peregrine.yml"; \
+    cp /tmp/flight-tmuxinator.yml "/home/${CONTAINER_USER}/.config/tmuxinator/flight.yml"; \
     cp /tmp/starship.toml "/home/${CONTAINER_USER}/.config/starship.toml"; \
     chown -R "${USER_UID}:${USER_GID}" "${ROS_WS}" "/home/${CONTAINER_USER}"
 

@@ -329,9 +329,86 @@ peregrine/
 │   │   ├── docker-compose.jetson.yml
 │   │   ├── docker-compose.rpi5.yml
 │   └── config/
-│       └── entrypoint.sh
+│       ├── entrypoint.sh
+│       ├── peregrine.service          # systemd unit file (template)
+│       └── tmuxinator/
+│           ├── peregrine.yml          # Dev tmux layout
+│           └── flight.yml             # Flight auto-start layout
 └── .devcontainer/                     # VS Code entry (recommended)
 ```
+
+---
+
+## Flight Mode (Auto-Start on Boot)
+
+For field-deployed drones, the stack auto-starts on boot via **systemd**. Dev mode uses `make shell-*` to get an interactive shell instead.
+
+| Mode | Who | What happens on boot |
+|------|-----|----------------------|
+| **Flight** | Most drones (N-1) | Stack auto-starts via systemd, no human needed |
+| **Dev** | One drone | SSH in, get a shell, iterate on code |
+
+### Setup (one-time per drone)
+
+```bash
+# On the drone (SSH in once):
+cd peregrine/docker
+
+# Set drone identity (git-ignored)
+echo "DRONE_ID=3" > .env.local
+
+# Build the image
+make build-jetson  # or build-rpi5
+
+# Install and enable the systemd service
+make install-service PLATFORM=jetson  # or rpi5
+make enable-flight
+
+# Reboot to verify
+sudo reboot
+```
+
+### Switching Modes
+
+```bash
+# Flight → Dev:
+make disable-flight
+make shell-jetson  # get a dev shell
+
+# Dev → Flight:
+make enable-flight
+
+# Check status:
+systemctl status peregrine
+journalctl -u peregrine -f
+```
+
+### Debugging a Running Flight Drone
+
+```bash
+# SSH in and exec into the running container:
+docker exec -it ros2-px4-flight-aircraft-3 bash
+
+# Attach to the tmux session to see stack output:
+tmux attach -t flight
+# Detach without stopping: Ctrl+B, then D
+```
+
+### How It Works
+
+```
+Power on → systemd starts peregrine.service (if enabled)
+  → docker compose up aircraft
+    → entrypoint.sh: source ROS2, set ROS_DOMAIN_ID, start XRCE Agent
+      → tmuxinator start flight
+        → window 1: single_uav.launch.py (stack)
+        → window 2: spare shell (for debug)
+```
+
+Key files:
+- `config/peregrine.service` — systemd unit file (template, patched by `make install-service`)
+- `config/tmuxinator/flight.yml` — tmux layout for flight mode
+- `.env.local` — per-drone overrides (git-ignored)
 
 ---
 
@@ -343,6 +420,10 @@ peregrine/
 | `PX4_VERSION` | `v1.16.1` | Sim | PX4 firmware tag for SITL |
 | `DRONE_ID` | `1` | All | Sets `ROS_DOMAIN_ID` |
 | `ROS_LOCALHOST_ONLY` | `1` | All | Restrict DDS traffic to localhost |
+| `START_XRCE_AGENT` | `false` | Jetson/RPi5 | Auto-start MicroXRCE-DDS Agent in entrypoint |
+| `XRCE_PORT` | `8888` | Jetson/RPi5 | UDP port for MicroXRCE-DDS Agent (when no XRCE_DEVICE) |
+| `XRCE_DEVICE` | _(unset)_ | Jetson/RPi5 | Serial device for MicroXRCE-DDS Agent (e.g. `/dev/ttyTHS1`) |
+| `XRCE_BAUD` | `921600` | Jetson/RPi5 | Baud rate for serial XRCE Agent |
 | `PX4_SIM_MODEL` | `x500` | Sim | Gazebo vehicle model |
 | `PX4_GZ_WORLD` | `default` | Sim | Gazebo world file |
 | `HEADLESS` | `false` | Sim | Reserved for future headless flow (not used in current compose files) |
@@ -372,11 +453,15 @@ peregrine/
 | `make dev-jetson` | Jetson disposable shell (`run --rm`) |
 | `make dev-rpi5` | RPi5 disposable shell (`run --rm`) |
 | `make shell-sim` | Start sim if needed and open bash |
-| `make shell-jetson` | Exec bash into running jetson container |
-| `make shell-rpi5` | Exec bash into running rpi5 container |
+| `make shell-jetson` | Start jetson if needed and open bash |
+| `make shell-rpi5` | Start rpi5 if needed and open bash |
 | `make down` | Stop all containers |
 | `make clean` | Stop + remove project images |
 | `make nuke` | Aggressive prune (`docker system prune -af --volumes`) |
+| `make install-service` | Install systemd service (`PLATFORM=jetson` or `rpi5`) |
+| `make uninstall-service` | Remove systemd service |
+| `make enable-flight` | Enable auto-start on boot |
+| `make disable-flight` | Disable auto-start and stop stack |
 | `make info` | Print effective `.env` config values |
 
 ---

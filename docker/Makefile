@@ -9,7 +9,7 @@ COMPOSE_SIM    := -f compose/docker-compose.simulation.yml
 COMPOSE_JETSON := -f compose/docker-compose.jetson.yml
 COMPOSE_RPI5   := -f compose/docker-compose.rpi5.yml
 
-COMPOSE_ENV_FILES := --env-file .env
+COMPOSE_ENV_FILES := --env-file .env $(if $(wildcard .env.local),--env-file .env.local,)
 
 # ── Build ────────────────────────────────────────────────────────────────────
 
@@ -67,9 +67,11 @@ shell-sim:
 	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_SIM) exec sim bash
 
 shell-jetson:
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_JETSON) up -d aircraft
 	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_JETSON) exec aircraft bash
 
 shell-rpi5:
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_RPI5) up -d aircraft
 	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_RPI5) exec aircraft bash
 
 # ── Cleanup ──────────────────────────────────────────────────────────────────
@@ -89,6 +91,35 @@ clean: down
 nuke: clean
 	docker system prune -af --volumes
 
+# ── Flight auto-start (systemd) ────────────────────────────────────────────
+
+PLATFORM ?= jetson
+SERVICE_FILE := /etc/systemd/system/peregrine.service
+
+install-service:
+	@echo "Installing peregrine.service for platform: $(PLATFORM)"
+	sudo cp config/peregrine.service $(SERVICE_FILE)
+	@# Patch compose file path for platform
+	sudo sed -i 's/docker-compose.jetson.yml/docker-compose.$(PLATFORM).yml/g' $(SERVICE_FILE)
+	@# Patch working directory to current location
+	sudo sed -i 's|WorkingDirectory=.*|WorkingDirectory=$(CURDIR)|g' $(SERVICE_FILE)
+	@# Patch .env.local path to current location
+	sudo sed -i 's|EnvironmentFile=-.*|EnvironmentFile=-$(CURDIR)/.env.local|g' $(SERVICE_FILE)
+	sudo systemctl daemon-reload
+	@echo "Service installed. Enable with: sudo systemctl enable --now peregrine"
+
+uninstall-service:
+	sudo systemctl disable --now peregrine 2>/dev/null || true
+	sudo rm -f $(SERVICE_FILE)
+	sudo systemctl daemon-reload
+	@echo "Service removed."
+
+enable-flight:
+	sudo systemctl enable --now peregrine
+
+disable-flight:
+	sudo systemctl disable --now peregrine
+
 # ── Info ─────────────────────────────────────────────────────────────────────
 
 info:
@@ -104,4 +135,5 @@ info:
         build-sim-nocache build-jetson-nocache build-rpi5-nocache build-all-nocache \
         sim jetson rpi5 dev dev-jetson dev-rpi5 \
         shell-sim shell-jetson shell-rpi5 \
+        install-service uninstall-service enable-flight disable-flight \
         down clean nuke info

@@ -1,0 +1,10 @@
+name: flight
+root: <%= ENV.fetch("ROS_WS", "/ros2_ws") %>
+
+pre_window:
+  - source /opt/ros/${ROS_DISTRO:-humble}/setup.bash
+  - '[ -f install/setup.bash ] && source install/setup.bash || true'
+
+windows:
+  - stack: ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false
+  - shell:
