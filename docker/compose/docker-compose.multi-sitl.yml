@@ -1,0 +1,128 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  docker-compose.multi-sitl.yml — Multi-UAV SITL with Zenoh bridging       ║
+# ║                                                                            ║
+# ║  Services:                                                                 ║
+# ║    sim  — Shared Gazebo + 2x PX4 SITL + MicroXRCE agents                 ║
+# ║    uav1 — Peregrine stack (domain 1) + Zenoh bridge                       ║
+# ║    uav2 — Peregrine stack (domain 2) + Zenoh bridge                       ║
+# ║    gcs  — Ground station TUI (domain 99) + Zenoh bridge                   ║
+# ║                                                                            ║
+# ║  All containers use network_mode: host so Zenoh TCP peers can connect     ║
+# ║  while DDS stays isolated via ROS_DOMAIN_ID + ROS_LOCALHOST_ONLY=1.       ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+x-common: &common
+  image: ${PROJECT_NAME:-ros2-px4-flight}-simulation:latest
+  network_mode: host
+  ipc: host
+  privileged: true
+  stdin_open: true
+  tty: true
+  volumes:
+    - ../../:${ROS_WS:-/ros2_ws}:rw
+    - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    - ${HOME}/.Xauthority:/home/${CONTAINER_USER:-peregrine}/.Xauthority:ro
+
+services:
+  # ── Shared Gazebo + PX4 SITL instances ──────────────────────────────────
+  sim:
+    <<: *common
+    container_name: ${PROJECT_NAME:-ros2-px4-flight}-multi-sim
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - ROS_LOCALHOST_ONLY=1
+      - ROS_WS=${ROS_WS:-/ros2_ws}
+      - PX4_GZ_WORLD=${PX4_GZ_WORLD:-default}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu, compute, utility, graphics]
+    command: >
+      bash -lc "
+        source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
+        [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
+        ros2 launch peregrine_bringup multi_uav_sitl.launch.py
+          num_uavs:=${NUM_UAVS:-2}
+          px4_gz_world:=${PX4_GZ_WORLD:-default}
+          headless:=0
+      "
+
+  # ── UAV 1: Peregrine stack + Zenoh bridge ───────────────────────────────
+  uav1:
+    <<: *common
+    container_name: ${PROJECT_NAME:-ros2-px4-flight}-uav1
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - DRONE_ID=1
+      - ROS_LOCALHOST_ONLY=1
+      - ROS_WS=${ROS_WS:-/ros2_ws}
+      - ZENOH_BRIDGE_CONFIG=${ROS_WS:-/ros2_ws}/docker/config/zenoh/uav_bridge.json5
+      - ZENOH_PORT=7447
+    depends_on:
+      sim:
+        condition: service_started
+    command: >
+      bash -lc "
+        echo '[uav1] Waiting for PX4 instance 0 to start...' &&
+        sleep 15 &&
+        source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
+        [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
+        ros2 launch peregrine_bringup single_uav.launch.py
+          start_microxrce_agent:=false
+          ros_domain_id:=1
+          microxrce_port:=8888
+      "
+
+  # ── UAV 2: Peregrine stack + Zenoh bridge ───────────────────────────────
+  uav2:
+    <<: *common
+    container_name: ${PROJECT_NAME:-ros2-px4-flight}-uav2
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - DRONE_ID=2
+      - ROS_LOCALHOST_ONLY=1
+      - ROS_WS=${ROS_WS:-/ros2_ws}
+      - ZENOH_BRIDGE_CONFIG=${ROS_WS:-/ros2_ws}/docker/config/zenoh/uav_bridge.json5
+      - ZENOH_PORT=7448
+    depends_on:
+      sim:
+        condition: service_started
+    command: >
+      bash -lc "
+        echo '[uav2] Waiting for PX4 instance 1 to start...' &&
+        sleep 20 &&
+        source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
+        [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
+        ros2 launch peregrine_bringup single_uav.launch.py
+          start_microxrce_agent:=false
+          ros_domain_id:=2
+          microxrce_port:=8890
+      "
+
+  # ── GCS: Ground station TUI + Zenoh bridge ─────────────────────────────
+  gcs:
+    <<: *common
+    container_name: ${PROJECT_NAME:-ros2-px4-flight}-gcs
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - DRONE_ID=99
+      - ROS_LOCALHOST_ONLY=1
+      - ROS_WS=${ROS_WS:-/ros2_ws}
+      - ZENOH_BRIDGE_CONFIG=${ROS_WS:-/ros2_ws}/docker/config/zenoh/gcs_bridge.json5
+    depends_on:
+      uav1:
+        condition: service_started
+      uav2:
+        condition: service_started
+    command: >
+      bash -lc "
+        echo '[gcs] Waiting for UAV stacks to start...' &&
+        sleep 25 &&
+        source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
+        [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
+        export ROS_DOMAIN_ID=99;
+        tmuxinator start -p ${ROS_WS:-/ros2_ws}/docker/config/tmuxinator/gcs.yml
+      "

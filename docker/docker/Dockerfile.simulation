@@ -165,6 +165,15 @@ RUN set -eux; \
 
 RUN rosdep init 2>/dev/null || true
 
+# ── Zenoh bridge for ROS2 DDS (multi-UAV inter-container bridging) ─────────
+ARG ZENOH_BRIDGE_VERSION=1.7.2
+RUN curl -fsSL \
+    "https://github.com/eclipse-zenoh/zenoh-plugin-ros2dds/releases/download/${ZENOH_BRIDGE_VERSION}/zenoh-plugin-ros2dds-${ZENOH_BRIDGE_VERSION}-x86_64-unknown-linux-gnu-standalone.zip" \
+    -o /tmp/zenoh-bridge.zip \
+    && unzip /tmp/zenoh-bridge.zip -d /tmp/zenoh-bridge \
+    && install -m 755 /tmp/zenoh-bridge/zenoh-bridge-ros2dds /usr/local/bin/zenoh-bridge-ros2dds \
+    && rm -rf /tmp/zenoh-bridge /tmp/zenoh-bridge.zip
+
 # ── Config & entrypoint ─────────────────────────────────────────────────────
 COPY config/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

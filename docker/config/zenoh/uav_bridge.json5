@@ -1,0 +1,44 @@
+{
+  // ── Per-UAV Zenoh Bridge Config ──────────────────────────────────────────
+  // Bridges local DDS status topics to Zenoh with /uav{N}/ prefix.
+  //
+  // NOTE: This is a TEMPLATE. The entrypoint.sh replaces __DRONE_ID__ and
+  // __ZENOH_PORT__ at runtime, writing to /tmp/zenoh_bridge.json5.
+  //
+  // Usage (via entrypoint, not directly):
+  //   DRONE_ID=1 ZENOH_PORT=7447 zenoh-bridge-ros2dds -c /tmp/zenoh_bridge.json5
+
+  mode: "peer",
+
+  listen: {
+    endpoints: ["tcp/0.0.0.0:__ZENOH_PORT__"],
+  },
+
+  connect: {
+    endpoints: [],
+  },
+
+  plugins: {
+    ros2dds: {
+      namespace: "/uav__DRONE_ID__",
+
+      allow: {
+        publishers: [
+          ".*/uav_state",
+          ".*/estimated_state",
+          ".*/safety_status",
+          ".*/estimation_status",
+          ".*/control_status",
+          ".*/trajectory_status",
+          ".*/status",
+          ".*/gps_status",
+        ],
+        subscribers: [],
+        service_servers: [],
+        service_clients: [],
+        action_servers: [],
+        action_clients: [],
+      },
+    },
+  },
+}

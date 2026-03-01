@@ -6,6 +6,7 @@ include .env
 export
 
 COMPOSE_SIM    := -f compose/docker-compose.simulation.yml
+COMPOSE_MULTI  := -f compose/docker-compose.multi-sitl.yml
 COMPOSE_JETSON := -f compose/docker-compose.jetson.yml
 COMPOSE_RPI5   := -f compose/docker-compose.rpi5.yml
 
@@ -36,6 +37,17 @@ build-rpi5-nocache:
 build-all-nocache: build-sim-nocache build-jetson-nocache build-rpi5-nocache
 
 # ── Run ──────────────────────────────────────────────────────────────────────
+
+multi-sitl:
+	xhost +local:docker 2>/dev/null || true
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_MULTI) up
+
+multi-sitl-down:
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_MULTI) down
+
+multi-dev:
+	xhost +local:docker 2>/dev/null || true
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_MULTI) run --rm sim bash
 
 sim:
 	xhost +local:docker 2>/dev/null || true
@@ -78,6 +90,7 @@ shell-rpi5:
 
 down:
 	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_SIM) down 2>/dev/null || true
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_MULTI) down 2>/dev/null || true
 	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_JETSON) down 2>/dev/null || true
 	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_RPI5) down 2>/dev/null || true
 
@@ -133,7 +146,8 @@ info:
 
 .PHONY: build-sim build-jetson build-rpi5 build-all \
         build-sim-nocache build-jetson-nocache build-rpi5-nocache build-all-nocache \
-        sim jetson rpi5 dev dev-jetson dev-rpi5 \
+        sim jetson rpi5 multi-sitl multi-sitl-down multi-dev \
+        dev dev-jetson dev-rpi5 \
         shell-sim shell-jetson shell-rpi5 \
         install-service uninstall-service enable-flight disable-flight \
         down clean nuke info

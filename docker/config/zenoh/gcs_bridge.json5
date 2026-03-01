@@ -1,0 +1,48 @@
+{
+  // ── GCS Zenoh Bridge Config ──────────────────────────────────────────────
+  // Subscribes to all /uavN/** Zenoh keys from UAV bridges and republishes
+  // them on local DDS domain 99 so the TUI can observe all UAVs.
+  //
+  // Usage:
+  //   ROS_DOMAIN_ID=99 zenoh-bridge-ros2dds -c gcs_bridge.json5
+
+  mode: "peer",
+
+  listen: {
+    endpoints: ["tcp/0.0.0.0:7449"],
+  },
+
+  // Connect to both UAV bridges on their respective ports
+  connect: {
+    endpoints: [
+      "tcp/localhost:7447",
+      "tcp/localhost:7448",
+    ],
+  },
+
+  plugins: {
+    ros2dds: {
+      domain: 99,
+
+      // Subscribe to namespaced topics from all UAVs.
+      // Patterns are regex — .* matches any UAV ID.
+      allow: {
+        publishers: [],
+        subscribers: [
+          "/uav.*/uav_state",
+          "/uav.*/estimated_state",
+          "/uav.*/safety_status",
+          "/uav.*/estimation_status",
+          "/uav.*/control_status",
+          "/uav.*/trajectory_status",
+          "/uav.*/status",
+          "/uav.*/gps_status",
+        ],
+        service_servers: [],
+        service_clients: [],
+        action_servers: [],
+        action_clients: [],
+      },
+    },
+  },
+}

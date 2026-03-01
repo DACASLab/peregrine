@@ -32,5 +32,18 @@ if [ "${START_XRCE_AGENT:-false}" = "true" ]; then
     sleep 1
 fi
 
+# ── Start Zenoh bridge if configured ─────────────────────────
+if [ -n "${ZENOH_BRIDGE_CONFIG}" ]; then
+    ZENOH_PORT="${ZENOH_PORT:-7447}"
+    ZENOH_RUNTIME_CONFIG="/tmp/zenoh_bridge.json5"
+    echo "[entrypoint] Templating Zenoh config: ${ZENOH_BRIDGE_CONFIG} → ${ZENOH_RUNTIME_CONFIG}"
+    sed -e "s/__DRONE_ID__/${DRONE_ID:-0}/g" \
+        -e "s/__ZENOH_PORT__/${ZENOH_PORT}/g" \
+        "${ZENOH_BRIDGE_CONFIG}" > "${ZENOH_RUNTIME_CONFIG}"
+    echo "[entrypoint] Starting zenoh-bridge-ros2dds (port=${ZENOH_PORT})..."
+    zenoh-bridge-ros2dds -c "${ZENOH_RUNTIME_CONFIG}" &
+    sleep 1
+fi
+
 # ── Execute the command passed to the container ────────────────
 exec "$@"

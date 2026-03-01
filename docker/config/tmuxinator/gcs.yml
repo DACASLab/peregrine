@@ -1,0 +1,18 @@
+name: gcs
+root: <%= ENV.fetch("ROS_WS", "/ros2_ws") %>
+
+pre_window:
+  - source /opt/ros/${ROS_DISTRO:-humble}/setup.bash
+  - '[ -f install/setup.bash ] && source install/setup.bash || true'
+  - export ROS_DOMAIN_ID=99
+  - clear
+
+windows:
+  - ground_station:
+      layout: even-vertical
+      panes:
+        - uav1_tui: ros2 run tui_status tui_status_node --ros-args -p uav_namespace:=/uav1
+        - uav2_tui: ros2 run tui_status tui_status_node --ros-args -p uav_namespace:=/uav2
+  - topics:
+      panes:
+        - ros2 topic list
