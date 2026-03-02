@@ -58,7 +58,7 @@ services:
         sleep 2 &&
         source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
         [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
-        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=1 microxrce_port:=8888 uav_namespace:=/uav1 target_system_id:=1 odom_frame:=odom base_link_frame:=uav1/base_link base_link_frd_frame:=uav1/base_link_frd use_sim_time:=true
+        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=1 microxrce_port:=8888 uav_namespace:=/uav1 target_system_id:=1 use_sim_time:=true
       "
   # -- UAV 2: Peregrine stack + Zenoh bridge --------------------------------
   uav2:
@@ -81,7 +81,7 @@ services:
         sleep 2 &&
         source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
         [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
-        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=2 microxrce_port:=8890 uav_namespace:=/uav2 px4_namespace:=/px4_1 target_system_id:=2 odom_frame:=odom base_link_frame:=uav2/base_link base_link_frd_frame:=uav2/base_link_frd use_sim_time:=true
+        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=2 microxrce_port:=8890 uav_namespace:=/uav2 px4_namespace:=/px4_1 target_system_id:=2 use_sim_time:=true
       "
   # -- UAV 3: Peregrine stack + Zenoh bridge --------------------------------
   uav3:
@@ -104,7 +104,7 @@ services:
         sleep 2 &&
         source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
         [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
-        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=3 microxrce_port:=8892 uav_namespace:=/uav3 px4_namespace:=/px4_2 target_system_id:=3 odom_frame:=odom base_link_frame:=uav3/base_link base_link_frd_frame:=uav3/base_link_frd use_sim_time:=true
+        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=3 microxrce_port:=8892 uav_namespace:=/uav3 px4_namespace:=/px4_2 target_system_id:=3 use_sim_time:=true
       "
   # -- UAV 4: Peregrine stack + Zenoh bridge --------------------------------
   uav4:
@@ -127,7 +127,7 @@ services:
         sleep 2 &&
         source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
         [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
-        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=4 microxrce_port:=8894 uav_namespace:=/uav4 px4_namespace:=/px4_3 target_system_id:=4 odom_frame:=odom base_link_frame:=uav4/base_link base_link_frd_frame:=uav4/base_link_frd use_sim_time:=true
+        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=4 microxrce_port:=8894 uav_namespace:=/uav4 px4_namespace:=/px4_3 target_system_id:=4 use_sim_time:=true
       "
   # -- GCS: Ground station TUI + Zenoh bridge -------------------------------------
   gcs:
