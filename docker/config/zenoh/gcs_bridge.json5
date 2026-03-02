@@ -4,7 +4,7 @@
   mode: "peer",
 
   listen: {
-    endpoints: ["tcp/0.0.0.0:7451"],
+    endpoints: ["tcp/0.0.0.0:7459"],
   },
 
   connect: {
@@ -13,6 +13,14 @@
       "tcp/localhost:7448",
       "tcp/localhost:7449",
       "tcp/localhost:7450",
+      "tcp/localhost:7451",
+      "tcp/localhost:7452",
+      "tcp/localhost:7453",
+      "tcp/localhost:7454",
+      "tcp/localhost:7455",
+      "tcp/localhost:7456",
+      "tcp/localhost:7457",
+      "tcp/localhost:7458",
     ],
   },
 

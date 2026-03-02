@@ -34,7 +34,7 @@ services:
       bash -lc "
         source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
         [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
-        ros2 launch peregrine_bringup multi_uav_sitl.launch.py num_uavs:=4 px4_gz_world:=${PX4_GZ_WORLD:-default} uav_spawn_spacing_m:=${UAV_SPAWN_SPACING_M:-5.0} px4_base_delay:=${PX4_BASE_DELAY:-8.0} px4_stagger_delay:=${PX4_STAGGER_DELAY:-5.0} headless:=0
+        ros2 launch peregrine_bringup multi_uav_sitl.launch.py num_uavs:=12 px4_gz_world:=${PX4_GZ_WORLD:-default} uav_spawn_spacing_m:=${UAV_SPAWN_SPACING_M:-5.0} px4_base_delay:=${PX4_BASE_DELAY:-8.0} px4_stagger_delay:=${PX4_STAGGER_DELAY:-5.0} headless:=0
       "
 
   # -- UAV 1: Peregrine stack + Zenoh bridge --------------------------------
@@ -129,6 +129,190 @@ services:
         [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
         ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=4 microxrce_port:=8894 uav_namespace:=/uav4 px4_namespace:=/px4_3 target_system_id:=4 use_sim_time:=true
       "
+  # -- UAV 5: Peregrine stack + Zenoh bridge --------------------------------
+  uav5:
+    <<: *common
+    container_name: ${PROJECT_NAME:-ros2-px4-flight}-uav5
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - DRONE_ID=5
+      - ROS_LOCALHOST_ONLY=1
+      - ROS_WS=${ROS_WS:-/ros2_ws}
+      - ZENOH_BRIDGE_CONFIG=${ROS_WS:-/ros2_ws}/docker/config/zenoh/uav_bridge.json5
+      - ZENOH_PORT=7451
+    depends_on:
+      sim:
+        condition: service_started
+    command: >
+      bash -lc "
+        echo '[uav5] Waiting for MicroXRCEAgent UDP port 8896...' &&
+        timeout 90 bash -c 'until ss -lnup | grep -q \":8896 \"; do sleep 1; done' &&
+        sleep 2 &&
+        source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
+        [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
+        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=5 microxrce_port:=8896 uav_namespace:=/uav5 px4_namespace:=/px4_4 target_system_id:=5 use_sim_time:=true
+      "
+  # -- UAV 6: Peregrine stack + Zenoh bridge --------------------------------
+  uav6:
+    <<: *common
+    container_name: ${PROJECT_NAME:-ros2-px4-flight}-uav6
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - DRONE_ID=6
+      - ROS_LOCALHOST_ONLY=1
+      - ROS_WS=${ROS_WS:-/ros2_ws}
+      - ZENOH_BRIDGE_CONFIG=${ROS_WS:-/ros2_ws}/docker/config/zenoh/uav_bridge.json5
+      - ZENOH_PORT=7452
+    depends_on:
+      sim:
+        condition: service_started
+    command: >
+      bash -lc "
+        echo '[uav6] Waiting for MicroXRCEAgent UDP port 8898...' &&
+        timeout 90 bash -c 'until ss -lnup | grep -q \":8898 \"; do sleep 1; done' &&
+        sleep 2 &&
+        source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
+        [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
+        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=6 microxrce_port:=8898 uav_namespace:=/uav6 px4_namespace:=/px4_5 target_system_id:=6 use_sim_time:=true
+      "
+  # -- UAV 7: Peregrine stack + Zenoh bridge --------------------------------
+  uav7:
+    <<: *common
+    container_name: ${PROJECT_NAME:-ros2-px4-flight}-uav7
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - DRONE_ID=7
+      - ROS_LOCALHOST_ONLY=1
+      - ROS_WS=${ROS_WS:-/ros2_ws}
+      - ZENOH_BRIDGE_CONFIG=${ROS_WS:-/ros2_ws}/docker/config/zenoh/uav_bridge.json5
+      - ZENOH_PORT=7453
+    depends_on:
+      sim:
+        condition: service_started
+    command: >
+      bash -lc "
+        echo '[uav7] Waiting for MicroXRCEAgent UDP port 8900...' &&
+        timeout 90 bash -c 'until ss -lnup | grep -q \":8900 \"; do sleep 1; done' &&
+        sleep 2 &&
+        source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
+        [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
+        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=7 microxrce_port:=8900 uav_namespace:=/uav7 px4_namespace:=/px4_6 target_system_id:=7 use_sim_time:=true
+      "
+  # -- UAV 8: Peregrine stack + Zenoh bridge --------------------------------
+  uav8:
+    <<: *common
+    container_name: ${PROJECT_NAME:-ros2-px4-flight}-uav8
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - DRONE_ID=8
+      - ROS_LOCALHOST_ONLY=1
+      - ROS_WS=${ROS_WS:-/ros2_ws}
+      - ZENOH_BRIDGE_CONFIG=${ROS_WS:-/ros2_ws}/docker/config/zenoh/uav_bridge.json5
+      - ZENOH_PORT=7454
+    depends_on:
+      sim:
+        condition: service_started
+    command: >
+      bash -lc "
+        echo '[uav8] Waiting for MicroXRCEAgent UDP port 8902...' &&
+        timeout 90 bash -c 'until ss -lnup | grep -q \":8902 \"; do sleep 1; done' &&
+        sleep 2 &&
+        source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
+        [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
+        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=8 microxrce_port:=8902 uav_namespace:=/uav8 px4_namespace:=/px4_7 target_system_id:=8 use_sim_time:=true
+      "
+  # -- UAV 9: Peregrine stack + Zenoh bridge --------------------------------
+  uav9:
+    <<: *common
+    container_name: ${PROJECT_NAME:-ros2-px4-flight}-uav9
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - DRONE_ID=9
+      - ROS_LOCALHOST_ONLY=1
+      - ROS_WS=${ROS_WS:-/ros2_ws}
+      - ZENOH_BRIDGE_CONFIG=${ROS_WS:-/ros2_ws}/docker/config/zenoh/uav_bridge.json5
+      - ZENOH_PORT=7455
+    depends_on:
+      sim:
+        condition: service_started
+    command: >
+      bash -lc "
+        echo '[uav9] Waiting for MicroXRCEAgent UDP port 8904...' &&
+        timeout 90 bash -c 'until ss -lnup | grep -q \":8904 \"; do sleep 1; done' &&
+        sleep 2 &&
+        source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
+        [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
+        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=9 microxrce_port:=8904 uav_namespace:=/uav9 px4_namespace:=/px4_8 target_system_id:=9 use_sim_time:=true
+      "
+  # -- UAV 10: Peregrine stack + Zenoh bridge --------------------------------
+  uav10:
+    <<: *common
+    container_name: ${PROJECT_NAME:-ros2-px4-flight}-uav10
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - DRONE_ID=10
+      - ROS_LOCALHOST_ONLY=1
+      - ROS_WS=${ROS_WS:-/ros2_ws}
+      - ZENOH_BRIDGE_CONFIG=${ROS_WS:-/ros2_ws}/docker/config/zenoh/uav_bridge.json5
+      - ZENOH_PORT=7456
+    depends_on:
+      sim:
+        condition: service_started
+    command: >
+      bash -lc "
+        echo '[uav10] Waiting for MicroXRCEAgent UDP port 8906...' &&
+        timeout 90 bash -c 'until ss -lnup | grep -q \":8906 \"; do sleep 1; done' &&
+        sleep 2 &&
+        source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
+        [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
+        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=10 microxrce_port:=8906 uav_namespace:=/uav10 px4_namespace:=/px4_9 target_system_id:=10 use_sim_time:=true
+      "
+  # -- UAV 11: Peregrine stack + Zenoh bridge --------------------------------
+  uav11:
+    <<: *common
+    container_name: ${PROJECT_NAME:-ros2-px4-flight}-uav11
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - DRONE_ID=11
+      - ROS_LOCALHOST_ONLY=1
+      - ROS_WS=${ROS_WS:-/ros2_ws}
+      - ZENOH_BRIDGE_CONFIG=${ROS_WS:-/ros2_ws}/docker/config/zenoh/uav_bridge.json5
+      - ZENOH_PORT=7457
+    depends_on:
+      sim:
+        condition: service_started
+    command: >
+      bash -lc "
+        echo '[uav11] Waiting for MicroXRCEAgent UDP port 8908...' &&
+        timeout 90 bash -c 'until ss -lnup | grep -q \":8908 \"; do sleep 1; done' &&
+        sleep 2 &&
+        source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
+        [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
+        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=11 microxrce_port:=8908 uav_namespace:=/uav11 px4_namespace:=/px4_10 target_system_id:=11 use_sim_time:=true
+      "
+  # -- UAV 12: Peregrine stack + Zenoh bridge --------------------------------
+  uav12:
+    <<: *common
+    container_name: ${PROJECT_NAME:-ros2-px4-flight}-uav12
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - DRONE_ID=12
+      - ROS_LOCALHOST_ONLY=1
+      - ROS_WS=${ROS_WS:-/ros2_ws}
+      - ZENOH_BRIDGE_CONFIG=${ROS_WS:-/ros2_ws}/docker/config/zenoh/uav_bridge.json5
+      - ZENOH_PORT=7458
+    depends_on:
+      sim:
+        condition: service_started
+    command: >
+      bash -lc "
+        echo '[uav12] Waiting for MicroXRCEAgent UDP port 8910...' &&
+        timeout 90 bash -c 'until ss -lnup | grep -q \":8910 \"; do sleep 1; done' &&
+        sleep 2 &&
+        source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
+        [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
+        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=12 microxrce_port:=8910 uav_namespace:=/uav12 px4_namespace:=/px4_11 target_system_id:=12 use_sim_time:=true
+      "
   # -- GCS: Ground station TUI + Zenoh bridge -------------------------------------
   gcs:
     <<: *common
@@ -139,7 +323,7 @@ services:
       - ROS_LOCALHOST_ONLY=1
       - ROS_WS=${ROS_WS:-/ros2_ws}
       - ZENOH_BRIDGE_CONFIG=${ROS_WS:-/ros2_ws}/docker/config/zenoh/gcs_bridge.json5
-      - ZENOH_PORT=7451
+      - ZENOH_PORT=7459
     depends_on:
       uav1:
         condition: service_started
@@ -149,10 +333,26 @@ services:
         condition: service_started
       uav4:
         condition: service_started
+      uav5:
+        condition: service_started
+      uav6:
+        condition: service_started
+      uav7:
+        condition: service_started
+      uav8:
+        condition: service_started
+      uav9:
+        condition: service_started
+      uav10:
+        condition: service_started
+      uav11:
+        condition: service_started
+      uav12:
+        condition: service_started
     command: >
       bash -lc "
         echo '[gcs] Waiting for UAV Zenoh peers...' &&
-        timeout 120 bash -c 'until ss -lntp | grep -q \":7447 \"; do sleep 1; done && until ss -lntp | grep -q \":7448 \"; do sleep 1; done && until ss -lntp | grep -q \":7449 \"; do sleep 1; done && until ss -lntp | grep -q \":7450 \"; do sleep 1; done' &&
+        timeout 120 bash -c 'until ss -lntp | grep -q \":7447 \"; do sleep 1; done && until ss -lntp | grep -q \":7448 \"; do sleep 1; done && until ss -lntp | grep -q \":7449 \"; do sleep 1; done && until ss -lntp | grep -q \":7450 \"; do sleep 1; done && until ss -lntp | grep -q \":7451 \"; do sleep 1; done && until ss -lntp | grep -q \":7452 \"; do sleep 1; done && until ss -lntp | grep -q \":7453 \"; do sleep 1; done && until ss -lntp | grep -q \":7454 \"; do sleep 1; done && until ss -lntp | grep -q \":7455 \"; do sleep 1; done && until ss -lntp | grep -q \":7456 \"; do sleep 1; done && until ss -lntp | grep -q \":7457 \"; do sleep 1; done && until ss -lntp | grep -q \":7458 \"; do sleep 1; done' &&
         sleep 2 &&
         source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
         [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;

@@ -16,6 +16,11 @@ fi
 export ROS_DOMAIN_ID=${DRONE_ID:-0}
 export ROS_LOCALHOST_ONLY=${ROS_LOCALHOST_ONLY:-1}
 
+# ── Enable multicast on loopback for DDS discovery ───────────
+# CycloneDDS needs multicast on lo when ROS_LOCALHOST_ONLY=1;
+# without this, Zenoh bridge DDS participants can't discover ROS nodes.
+sudo ip link set lo multicast on 2>/dev/null || true
+
 # ── Start Micro-XRCE-DDS Agent if requested ───────────────────
 if [ "${START_XRCE_AGENT:-false}" = "true" ]; then
     if [ -n "${XRCE_DEVICE}" ]; then
