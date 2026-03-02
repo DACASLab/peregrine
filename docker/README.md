@@ -426,7 +426,7 @@ Key files:
 | `XRCE_BAUD` | `921600` | Jetson/RPi5 | Baud rate for serial XRCE Agent |
 | `PX4_SIM_MODEL` | `x500` | Sim | Gazebo vehicle model |
 | `PX4_GZ_WORLD` | `default` | Sim | Gazebo world file |
-| `HEADLESS` | `false` | Sim | Reserved for future headless flow (not used in current compose files) |
+| `HEADLESS` | `false` | Sim | Run Gazebo headless (1=headless, 0=GUI). Used by SITL launch files. |
 | `ROS_WS` | `/ros2_ws` | All | ROS 2 workspace path inside container |
 | `CONTAINER_USER` | `peregrine` | All | Non-root username inside container |
 | `USER_UID` | `1000` | All | Host UID to map container user |
