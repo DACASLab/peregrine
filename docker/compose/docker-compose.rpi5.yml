@@ -33,8 +33,6 @@ services:
       - XRCE_DEVICE=/dev/ttyAMA0
     volumes:
       - ../../:${ROS_WS:-/ros2_ws}:rw
-      - ${HOME}/.codex:/home/${CONTAINER_USER:-peregrine}/.codex:rw
-      - ${HOME}/.claude:/home/${CONTAINER_USER:-peregrine}/.claude:rw
     # Note: privileged=true exposes all /dev/* — no explicit devices: needed.
     # UART default: /dev/ttyAMA0 (RPi5), USB fallback: /dev/ttyUSB0
     command: bash -lc "tmuxinator start flight"
