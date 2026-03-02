@@ -44,7 +44,7 @@ services:
       bash -lc "
         source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
         [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
-        ros2 launch peregrine_bringup multi_uav_sitl.launch.py num_uavs:=${NUM_UAVS:-2} px4_gz_world:=${PX4_GZ_WORLD:-default} headless:=0
+        ros2 launch peregrine_bringup multi_uav_sitl.launch.py num_uavs:=${NUM_UAVS:-2} px4_gz_world:=${PX4_GZ_WORLD:-default} uav_spawn_spacing_m:=${UAV_SPAWN_SPACING_M:-5.0} headless:=0
       "
 
   # ── UAV 1: Peregrine stack + Zenoh bridge ───────────────────────────────
@@ -64,10 +64,10 @@ services:
     command: >
       bash -lc "
         echo '[uav1] Waiting for PX4 instance 0 to start...' &&
-        sleep 15 &&
+        sleep 25 &&
         source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
         [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
-        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=1 microxrce_port:=8888
+        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=1 microxrce_port:=8888 target_system_id:=1 use_sim_time:=true
       "
 
   # ── UAV 2: Peregrine stack + Zenoh bridge ───────────────────────────────
@@ -87,10 +87,10 @@ services:
     command: >
       bash -lc "
         echo '[uav2] Waiting for PX4 instance 1 to start...' &&
-        sleep 20 &&
+        sleep 35 &&
         source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
         [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
-        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=2 microxrce_port:=8890
+        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=2 microxrce_port:=8890 px4_namespace:=/px4_1 target_system_id:=2 use_sim_time:=true
       "
 
   # ── GCS: Ground station TUI + Zenoh bridge ─────────────────────────────
@@ -112,7 +112,7 @@ services:
     command: >
       bash -lc "
         echo '[gcs] Waiting for UAV stacks to start...' &&
-        sleep 25 &&
+        sleep 45 &&
         source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
         [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
         export ROS_DOMAIN_ID=99;
