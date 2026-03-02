@@ -38,7 +38,10 @@ build-all-nocache: build-sim-nocache build-jetson-nocache build-rpi5-nocache
 
 # ── Run ──────────────────────────────────────────────────────────────────────
 
-multi-sitl:
+generate-multi:
+	python3 scripts/generate_multi_sitl.py --num-uavs $(NUM_UAVS)
+
+multi-sitl: generate-multi
 	xhost +local:docker 2>/dev/null || true
 	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_MULTI) up
 
@@ -48,6 +51,14 @@ multi-sitl-down:
 multi-dev:
 	xhost +local:docker 2>/dev/null || true
 	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_MULTI) run --rm sim bash
+
+shell-gcs:
+	xhost +local:docker 2>/dev/null || true
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_MULTI) up -d gcs
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_MULTI) exec gcs bash
+
+tmux-gcs:
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_MULTI) exec gcs tmux attach -t gcs
 
 sim:
 	xhost +local:docker 2>/dev/null || true
@@ -146,8 +157,9 @@ info:
 
 .PHONY: build-sim build-jetson build-rpi5 build-all \
         build-sim-nocache build-jetson-nocache build-rpi5-nocache build-all-nocache \
-        sim jetson rpi5 multi-sitl multi-sitl-down multi-dev \
-        dev dev-jetson dev-rpi5 \
+	        sim jetson rpi5 generate-multi multi-sitl multi-sitl-down multi-dev \
+	        shell-gcs tmux-gcs \
+	        dev dev-jetson dev-rpi5 \
         shell-sim shell-jetson shell-rpi5 \
         install-service uninstall-service enable-flight disable-flight \
         down clean nuke info
