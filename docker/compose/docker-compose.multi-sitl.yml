@@ -44,10 +44,7 @@ services:
       bash -lc "
         source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
         [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
-        ros2 launch peregrine_bringup multi_uav_sitl.launch.py
-          num_uavs:=${NUM_UAVS:-2}
-          px4_gz_world:=${PX4_GZ_WORLD:-default}
-          headless:=0
+        ros2 launch peregrine_bringup multi_uav_sitl.launch.py num_uavs:=${NUM_UAVS:-2} px4_gz_world:=${PX4_GZ_WORLD:-default} headless:=0
       "
 
   # ── UAV 1: Peregrine stack + Zenoh bridge ───────────────────────────────
@@ -70,10 +67,7 @@ services:
         sleep 15 &&
         source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
         [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
-        ros2 launch peregrine_bringup single_uav.launch.py
-          start_microxrce_agent:=false
-          ros_domain_id:=1
-          microxrce_port:=8888
+        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=1 microxrce_port:=8888
       "
 
   # ── UAV 2: Peregrine stack + Zenoh bridge ───────────────────────────────
@@ -96,10 +90,7 @@ services:
         sleep 20 &&
         source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
         [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
-        ros2 launch peregrine_bringup single_uav.launch.py
-          start_microxrce_agent:=false
-          ros_domain_id:=2
-          microxrce_port:=8890
+        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=2 microxrce_port:=8890
       "
 
   # ── GCS: Ground station TUI + Zenoh bridge ─────────────────────────────
@@ -112,6 +103,7 @@ services:
       - ROS_LOCALHOST_ONLY=1
       - ROS_WS=${ROS_WS:-/ros2_ws}
       - ZENOH_BRIDGE_CONFIG=${ROS_WS:-/ros2_ws}/docker/config/zenoh/gcs_bridge.json5
+      - ZENOH_PORT=7449
     depends_on:
       uav1:
         condition: service_started
