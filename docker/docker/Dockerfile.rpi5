@@ -61,6 +61,15 @@ RUN git clone --depth 1 https://github.com/eProsima/Micro-XRCE-DDS-Agent.git /tm
     && make -j$(nproc) && make install && ldconfig \
     && rm -rf /tmp/xrce
 
+# ── Zenoh bridge for ROS2 DDS (UAV → GCS telemetry bridging) ──────────────
+RUN curl -fsSL https://download.eclipse.org/zenoh/debian-repo/zenoh-public-key \
+        | gpg --dearmor --yes --output /etc/apt/keyrings/zenoh-public-key.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/zenoh-public-key.gpg] https://download.eclipse.org/zenoh/debian-repo/ /" \
+        > /etc/apt/sources.list.d/zenoh.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends zenoh-bridge-ros2dds \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN rosdep init 2>/dev/null || true
 
 # ── Python tooling ──────────────────────────────────────────────────────────

@@ -23,6 +23,8 @@
 
   plugins: {
     ros2dds: {
+      domain: __DRONE_ID__,
+
       allow: {
         publishers: [
           ".*/uav_state",

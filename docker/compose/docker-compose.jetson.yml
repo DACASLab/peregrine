@@ -32,6 +32,8 @@ services:
       - ROS_WS=${ROS_WS:-/ros2_ws}
       - START_XRCE_AGENT=true
       - XRCE_DEVICE=/dev/ttyTHS1
+      - ZENOH_BRIDGE_CONFIG=${ROS_WS:-/ros2_ws}/docker/config/zenoh/uav_bridge.json5
+      - ZENOH_PORT=${ZENOH_PORT:-7447}
     volumes:
       - ../../:${ROS_WS:-/ros2_ws}:rw
     # Note: privileged=true exposes all /dev/* — no explicit devices: needed.
