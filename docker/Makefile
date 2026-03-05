@@ -7,34 +7,30 @@ export
 
 COMPOSE_SIM    := -f compose/docker-compose.simulation.yml
 COMPOSE_MULTI  := -f compose/docker-compose.multi-sitl.yml
+COMPOSE_GCS    := -f compose/docker-compose.gcs.yml
 COMPOSE_JETSON := -f compose/docker-compose.jetson.yml
 COMPOSE_RPI5   := -f compose/docker-compose.rpi5.yml
 
 COMPOSE_ENV_FILES := --env-file .env $(if $(wildcard .env.local),--env-file .env.local,)
 
+# Set NOCACHE=1 to force rebuild without cache (e.g. make build-sim NOCACHE=1)
+BUILD_OPTS := $(if $(NOCACHE),--no-cache,)
+
 # ── Build ────────────────────────────────────────────────────────────────────
 
 build-sim:
-	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_SIM) build
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_SIM) build $(BUILD_OPTS)
 
 build-jetson:
-	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_JETSON) build
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_JETSON) build $(BUILD_OPTS)
 
 build-rpi5:
-	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_RPI5) build
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_RPI5) build $(BUILD_OPTS)
 
-build-all: build-sim build-jetson build-rpi5
+build-gcs:
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_GCS) build $(BUILD_OPTS)
 
-build-sim-nocache:
-	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_SIM) build --no-cache
-
-build-jetson-nocache:
-	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_JETSON) build --no-cache
-
-build-rpi5-nocache:
-	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_RPI5) build --no-cache
-
-build-all-nocache: build-sim-nocache build-jetson-nocache build-rpi5-nocache
+build-all: build-sim build-jetson build-rpi5 build-gcs
 
 # ── Run ──────────────────────────────────────────────────────────────────────
 
@@ -52,13 +48,23 @@ multi-dev:
 	xhost +local:docker 2>/dev/null || true
 	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_MULTI) run --rm sim bash
 
+generate-gcs:
+	python3 scripts/generate_gcs_config.py
+
+gcs: generate-gcs
+	xhost +local:docker 2>/dev/null || true
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_GCS) up
+
+gcs-down:
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_GCS) down
+
 shell-gcs:
 	xhost +local:docker 2>/dev/null || true
-	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_MULTI) up -d gcs
-	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_MULTI) exec gcs bash
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_GCS) up -d gcs
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_GCS) exec gcs bash
 
 tmux-gcs:
-	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_MULTI) exec gcs tmux attach -t gcs
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_GCS) exec gcs tmux attach -t gcs
 
 sim:
 	xhost +local:docker 2>/dev/null || true
@@ -102,12 +108,14 @@ shell-rpi5:
 down:
 	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_SIM) down 2>/dev/null || true
 	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_MULTI) down 2>/dev/null || true
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_GCS) down 2>/dev/null || true
 	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_JETSON) down 2>/dev/null || true
 	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_RPI5) down 2>/dev/null || true
 
 clean: down
 	docker image rm -f \
 		$(PROJECT_NAME)-simulation:latest \
+		$(PROJECT_NAME)-gcs:latest \
 		$(PROJECT_NAME)-jetson:latest \
 		$(PROJECT_NAME)-rpi5:latest \
 		2>/dev/null || true
@@ -155,11 +163,10 @@ info:
 	@echo "ROS_WS:       $(ROS_WS)"
 	@echo "User:         $(CONTAINER_USER) ($(USER_UID):$(USER_GID))"
 
-.PHONY: build-sim build-jetson build-rpi5 build-all \
-        build-sim-nocache build-jetson-nocache build-rpi5-nocache build-all-nocache \
-	        sim jetson rpi5 generate-multi multi-sitl multi-sitl-down multi-dev \
-	        shell-gcs tmux-gcs \
-	        dev dev-jetson dev-rpi5 \
+.PHONY: build-sim build-jetson build-rpi5 build-gcs build-all \
+        sim jetson rpi5 generate-multi multi-sitl multi-sitl-down multi-dev \
+        generate-gcs gcs gcs-down shell-gcs tmux-gcs \
+        dev dev-jetson dev-rpi5 \
         shell-sim shell-jetson shell-rpi5 \
         install-service uninstall-service enable-flight disable-flight \
         down clean nuke info

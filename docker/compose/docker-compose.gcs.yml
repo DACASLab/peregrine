@@ -1,0 +1,45 @@
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║  docker-compose.gcs.yml — Standalone Ground Control Station                ║
+# ║                                                                            ║
+# ║  Works for both simulation and hardware via generate_gcs_config.py.        ║
+# ║  Build:  make build-gcs                                                    ║
+# ║  Run:    make gcs  (auto-generates configs based on GCS_MODE)              ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+services:
+  gcs:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.gcs
+      args:
+        RPI_BASE_IMAGE: ${RPI_BASE_IMAGE:-ros:humble-ros-base-jammy}
+        ROS_DISTRO: ${ROS_DISTRO:-humble}
+        ROS_WS: ${ROS_WS:-/ros2_ws}
+        CONTAINER_USER: ${CONTAINER_USER:-peregrine}
+        USER_UID: ${USER_UID:-1000}
+        USER_GID: ${USER_GID:-1000}
+    image: ${PROJECT_NAME:-ros2-px4-flight}-gcs:latest
+    container_name: ${PROJECT_NAME:-ros2-px4-flight}-gcs
+    network_mode: host
+    ipc: host
+    privileged: true
+    stdin_open: true
+    tty: true
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - DRONE_ID=99
+      - ROS_LOCALHOST_ONLY=0
+      - ROS_WS=${ROS_WS:-/ros2_ws}
+      - ZENOH_BRIDGE_CONFIG=${ROS_WS:-/ros2_ws}/docker/config/zenoh/gcs_bridge.generated.json5
+      - ZENOH_PORT=${GCS_ZENOH_PORT:-7459}
+    volumes:
+      - ../../:${ROS_WS:-/ros2_ws}:rw
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${HOME}/.Xauthority:/home/${CONTAINER_USER:-peregrine}/.Xauthority:ro
+    command: >
+      bash -lc "
+        source /opt/ros/$${ROS_DISTRO:-humble}/setup.bash &&
+        [ -f $${ROS_WS:-/ros2_ws}/install/setup.bash ] && source $${ROS_WS:-/ros2_ws}/install/setup.bash;
+        export ROS_DOMAIN_ID=99;
+        tmuxinator start -p $${ROS_WS:-/ros2_ws}/docker/config/tmuxinator/gcs.generated.yml
+      "

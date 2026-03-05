@@ -62,12 +62,6 @@ Visualization Manager:
           Value: false
         uav9/base_link_frd:
           Value: false
-        uav10/base_link_frd:
-          Value: false
-        uav11/base_link_frd:
-          Value: false
-        uav12/base_link_frd:
-          Value: false
       Marker Scale: 5
       Name: TF
       Show Arrows: true
