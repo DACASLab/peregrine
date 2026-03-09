@@ -36,6 +36,8 @@ services:
       - ZENOH_PORT=${ZENOH_PORT:-7447}
     volumes:
       - ../../:${ROS_WS:-/ros2_ws}:rw
+      - /dev:/dev
+      - /run/udev:/run/udev:ro
     # Note: privileged=true exposes all /dev/* — no explicit devices: needed.
     # UART default: /dev/ttyTHS1 (Orin), USB fallback: /dev/ttyUSB0
     command: bash -lc "tmuxinator start flight"
