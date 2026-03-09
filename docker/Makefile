@@ -3,6 +3,7 @@
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
 include .env
+-include .env.local
 export
 
 COMPOSE_SIM    := -f compose/docker-compose.simulation.yml
