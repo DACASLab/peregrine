@@ -78,6 +78,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         gstreamer1.0-plugins-base \
         gstreamer1.0-plugins-good \
         libgstreamer1.0-dev \
+        # Temporary: required while tui_status remains in core packages.
+        # Remove this once TUI is moved outside the core package set.
+        libncurses5-dev \
+        libncursesw5-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # ── Micro-XRCE-DDS Agent ────────────────────────────────────────────────────
