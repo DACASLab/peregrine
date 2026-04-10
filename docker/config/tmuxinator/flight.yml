@@ -6,5 +6,11 @@ pre_window:
   - '[ -f install/setup.bash ] && source install/setup.bash || true'
 
 windows:
-  - stack: ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false
+  - stack: ${ROS_WS:-/ros2_ws}/docker/config/start_flight_stack.sh
   - shell:
+  - tui: >
+      export ROS_DOMAIN_ID=${DRONE_ID:-1};
+      export ROS_LOCALHOST_ONLY=${ROS_LOCALHOST_ONLY:-1};
+      tmux resize-window -t "$(tmux display-message -p '#S:#I')" -x 120 -y 40;
+      clear;
+      ros2 run tui_status tui_status_node --ros-args -p uav_namespace:=/uav${DRONE_ID:-1}

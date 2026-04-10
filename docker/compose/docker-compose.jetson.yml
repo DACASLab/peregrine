@@ -30,9 +30,9 @@ services:
       - DRONE_ID=${DRONE_ID:-1}
       - ROS_LOCALHOST_ONLY=${ROS_LOCALHOST_ONLY:-1}
       - ROS_WS=${ROS_WS:-/ros2_ws}
-      - START_XRCE_AGENT=true
-      - XRCE_DEVICE=/dev/ttyTHS1
-      - XRCE_BAUD=3000000
+      - START_XRCE_AGENT=${START_XRCE_AGENT:-true}
+      - XRCE_DEVICE=${XRCE_DEVICE:-/dev/ttyTHS1}
+      - XRCE_BAUD=${XRCE_BAUD:-3000000}
       - ZENOH_BRIDGE_CONFIG=${ROS_WS:-/ros2_ws}/docker/config/zenoh/uav_bridge.json5
       - ZENOH_PORT=${ZENOH_PORT:-7447}
     volumes:
@@ -41,5 +41,5 @@ services:
       - /run/udev:/run/udev:ro
     # Note: privileged=true exposes all /dev/* — no explicit devices: needed.
     # UART default: /dev/ttyTHS1 (Orin), USB fallback: /dev/ttyUSB0
-    command: bash -lc "tmuxinator start flight"
+    command: bash -lc "tmuxinator start -p ${ROS_WS:-/ros2_ws}/docker/config/tmuxinator/flight.yml"
     restart: on-failure
