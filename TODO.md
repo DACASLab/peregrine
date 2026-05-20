@@ -223,7 +223,8 @@ Prepare `uav_manager` for a Behavior Tree application layer by removing orchestr
 - [x] Hardcode `se3.gravity` to 9.81 — physical constant, not a tunable
 - [x] Fix `se3.mass` code default drift (was 1.5 in code vs 2.0643 in YAML)
 - [x] Fix `se3.max_thrust_N` code default drift (was 29.43 in code vs 34.19432 in YAML)
-- [x] Remove MAVLink `target_system_id`, `target_component_id`, `source_system_id`, `source_component_id` from `hardware_abstraction` — cargo from MAVLink era, DDS bridge handles routing, hardcoded to 1
+- [x] Remove MAVLink `target_component_id`, `source_system_id`, `source_component_id` from `hardware_abstraction` — cargo from MAVLink era, hardcoded to 1
+- [x] Re-add `target_system_id` as a parameter (default 1) — PX4 Commander validates `target_system` against `MAV_SYS_ID` even over uXRCE-DDS; multi-instance SITL sets `MAV_SYS_ID = instance+1`, so hardcoding to 1 silently rejects commands for instances > 0
 - [x] Remove `home_init_timeout_s` from bringup YAML configs (`default.yaml`, `simulation.yaml`)
 - [x] Remove `dependency_startup_timeout_s` from `simulation.yaml`
 - [x] Remove `se3.gravity` from all SE3 YAML configs (`defaults.yaml`, `se3_tuned.yaml`, `se3_conservative.yaml`)
