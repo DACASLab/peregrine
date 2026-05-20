@@ -275,14 +275,16 @@ Prepare `uav_manager` for a Behavior Tree application layer by removing orchestr
 ## Phase 6: Production Readiness
 
 ### 6.1 Kill Tmuxinator for hardware flight
-- **Problem:** `docker/config/tmuxinator/flight.yml` uses tmux panes to run ROS 2 nodes. Crashed nodes leave dead terminals, break lifecycle tracking, and make logging unreliable.
-- **Fix for development (SITL):** Keep tmuxinator, it's fine for developers.
-- **Fix for hardware (Jetson/RPi5):** Docker entrypoint runs exactly one command: `ros2 launch peregrine_bringup hardware_mission.launch.py`. ROS 2 launch manages processes, restarts, and logging.
-- [ ] Create `hardware_mission.launch.py` (or verify it exists and is complete)
-- [ ] Update Docker entrypoint for hardware to use `ros2 launch` instead of tmuxinator
-- [ ] Verify all nodes are included in the hardware launch file
-- [ ] Test process restart behavior (node crash → launch system restarts it)
-- [ ] Verify logs route to ROS `/log` directory and Docker daemon
+- **Problem:** `docker/config/tmuxinator/flight.yml` uses tmux panes to run ROS 2 nodes. Crashed nodes leave dead terminals, break lifecycle tracking, and make logging unreliable. TUI on hardware wastes resources — monitoring belongs on GCS.
+- **Fix for development (SITL):** Keep tmuxinator (`peregrine.yml`), it's fine for developers.
+- **Fix for hardware (Jetson/RPi5):** Container runs `start_flight_stack.sh` directly → `ros2 launch core_stack.launch.py`. Flight stack is PID 1 — Docker handles restart on crash. Debugging via `make shell-jetson` / `make shell-rpi5`.
+- [x] Delete `docker/config/tmuxinator/flight.yml`
+- [x] Update Jetson/RPi5 docker-compose `command` to run `start_flight_stack.sh` directly
+- [x] Remove `ruby-full` and `gem install tmuxinator` from Jetson/RPi5 Dockerfiles
+- [x] Remove tmuxinator config COPY/setup from Jetson/RPi5 Dockerfiles
+- [x] TUI stays on GCS only (already in `gcs.generated.yml`)
+- [x] Logs: ROS 2 `~/.ros/log/` + `docker logs` — no tmux scrollback needed
+- [x] Hardware debugging: `make shell-jetson` / `make shell-rpi5` → `docker exec aircraft bash`
 
 ---
 

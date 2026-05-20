@@ -37,5 +37,5 @@ services:
       - ../../:${ROS_WS:-/ros2_ws}:rw
     # Note: privileged=true exposes all /dev/* — no explicit devices: needed.
     # UART default: /dev/ttyAMA0 (RPi5), USB fallback: /dev/ttyUSB0
-    command: bash -lc "tmuxinator start flight"
+    command: bash -lc "${ROS_WS:-/ros2_ws}/docker/config/start_flight_stack.sh"
     restart: on-failure

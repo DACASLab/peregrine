@@ -41,5 +41,5 @@ services:
       - /run/udev:/run/udev:ro
     # Note: privileged=true exposes all /dev/* — no explicit devices: needed.
     # UART default: /dev/ttyTHS1 (Orin), USB fallback: /dev/ttyUSB0
-    command: bash -lc "tmuxinator start -p ${ROS_WS:-/ros2_ws}/docker/config/tmuxinator/flight.yml"
+    command: bash -lc "${ROS_WS:-/ros2_ws}/docker/config/start_flight_stack.sh"
     restart: on-failure

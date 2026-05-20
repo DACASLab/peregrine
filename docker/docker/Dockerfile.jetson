@@ -55,7 +55,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python3-vcstool python3-jinja2 python3-numpy python3-empy \
         python3-toml python3-packaging python3-jsonschema \
         tmux htop nano net-tools iputils-ping iproute2 sudo \
-        bash-completion ruby-full \
+        bash-completion \
         # ROS2 base + key packages
         ros-${ROS_DISTRO}-ros-base \
         ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
@@ -112,10 +112,7 @@ RUN rosdep init 2>/dev/null || true
 #
 RUN pip3 install --no-cache-dir \
         mavsdk pymavlink "setuptools==58.2.0"
-RUN gem install tmuxinator --no-document
 RUN curl -fsSL https://starship.rs/install.sh | sh -s -- -y
-COPY config/tmuxinator/peregrine.yml /tmp/peregrine-tmuxinator.yml
-COPY config/tmuxinator/flight.yml /tmp/flight-tmuxinator.yml
 COPY config/starship.toml /tmp/starship.toml
 
 # ── Create non-root development user (host UID/GID mapping) ────────────────
@@ -138,9 +135,7 @@ RUN set -eux; \
     echo "${CONTAINER_USER} ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/${CONTAINER_USER}"; \
     chmod 0440 "/etc/sudoers.d/${CONTAINER_USER}"; \
     mkdir -p "${ROS_WS}/src"; \
-    mkdir -p "/home/${CONTAINER_USER}/.config/tmuxinator"; \
-    cp /tmp/peregrine-tmuxinator.yml "/home/${CONTAINER_USER}/.config/tmuxinator/peregrine.yml"; \
-    cp /tmp/flight-tmuxinator.yml "/home/${CONTAINER_USER}/.config/tmuxinator/flight.yml"; \
+    mkdir -p "/home/${CONTAINER_USER}/.config"; \
     cp /tmp/starship.toml "/home/${CONTAINER_USER}/.config/starship.toml"; \
     chown -R "${USER_UID}:${USER_GID}" "${ROS_WS}" "/home/${CONTAINER_USER}"
 
