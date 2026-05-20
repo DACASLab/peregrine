@@ -116,8 +116,10 @@ RUN { \
 } >> /home/${CONTAINER_USER}/.bashrc
 
 # ── BehaviorTree.CPP v4 (Phase 7: BT package scaffolding) ───────────────────
+# ── generate_parameter_library (Phase 5.3: type-safe parameter schemas) ─────
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-${ROS_DISTRO}-behaviortree-cpp \
+    ros-${ROS_DISTRO}-generate-parameter-library \
     && rm -rf /var/lib/apt/lists/*
 
 USER ${CONTAINER_USER}

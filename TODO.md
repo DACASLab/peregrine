@@ -202,16 +202,17 @@ Prepare `uav_manager` for a Behavior Tree application layer by removing orchestr
 ### 4.4 Build `PeregrineClient` Python API
 - **Problem:** Every demo script repeats: parameter declarations, UAVState subscription, action client setup, server wait logic, preflight readiness checks. ~60% of each script is identical boilerplate.
 - **Fix:** `PeregrineClient` class encapsulating all ROS 2 client logic.
-- [ ] Create `peregrine_client` Python package (or module in `peregrine_bringup`)
-- [ ] Implement core methods: `arm()`, `takeoff(alt)`, `land()`, `execute_trajectory(type, params)`, `wait_ready()`
-- [ ] Handle action client lifecycle internally (server wait, goal send, result polling)
+- [x] Create `peregrine_client` Python package
+- [x] Implement core methods: `arm()`, `takeoff(alt)`, `land()`, `execute()`, `go_to()`, `wait_ready()`, `clear_emergency()`, `set_mode()`
+- [x] Handle action client lifecycle internally (server wait, goal send, result polling)
 - [ ] Provide async variants for BT integration
-- [ ] Rewrite `circle_figure8_demo.py` using the client (proof of concept)
-- [ ] Migrate all other demo scripts
+- [x] Rewrite `circle_figure8_demo.py` using the client (proof of concept)
+- [x] Migrate `multi_cycle_demo.py`, `controller_switch_demo.py`, `controller_switch_inflight_demo.py`, `step_response_demo.py`
+- [ ] Migrate remaining safety test scripts (`safety_regression_demo`, `safety_takeoff_hold_demo`, `safety_fault_injector`)
 
 ### 4.5 Parameterize hardcoded paths
-- [ ] Replace `/opt/PX4-Autopilot` with `$PX4_DIR` env var (default fallback to `/opt/PX4-Autopilot`) in all launch files
-- [ ] Replace `/tmp/circle_eval.json` and similar with `$HOME/.ros/peregrine/` or parameterized paths
+- [x] Replace `/opt/PX4-Autopilot` with `px4_autopilot_dir` launch argument (default `/opt/PX4-Autopilot`) in `multi_uav_sitl.launch.py`
+- [x] `/tmp/circle_eval.json` and `/tmp/step_response_eval.json` are already ROS parameters (`output_path`) — overridable via `--ros-args`
 
 ### 4.6 Parameter audit and cleanup
 - **Problem:** Accumulated parameter surface had dead params, topic-name params that duplicate ROS 2 remapping, hardcoded physical constants exposed as tunables, MAVLink-era cargo params, and code-default/YAML-default drift.
@@ -241,17 +242,17 @@ Prepare `uav_manager` for a Behavior Tree application layer by removing orchestr
 - [x] GoTo is used by `trajectory_manager` (serves directly) and `safety_regression_demo.py`
 - [x] Removed `acceptance_radius_m` field and updated feedback (Phase 1.1)
 
-### 5.2 Evaluate custom vs standard ROS messages
-- **Problem:** `GpsStatus.msg` fields overlap with `sensor_msgs/NavSatFix`. `PX4Status.msg` has PX4-specific fields (nav_state, arming_state) that don't map to standard messages.
-- [ ] Document why `PX4Status.msg` is custom (PX4-specific enum fields — likely justified)
-- [ ] Evaluate if `GpsStatus.msg` can be replaced with `sensor_msgs/NavSatFix` + a small supplement
-- [ ] If custom messages are kept, add comments explaining why standard alternatives were rejected
+### 5.2 ~~Evaluate custom vs standard ROS messages~~
+- **Status:** Evaluated — both custom messages are justified and kept.
+- [x] `PX4Status.msg` — consolidates PX4-specific fields (`nav_state`, `arming_state`, `failure_detector_status`, `motor_output`) from multiple px4_msgs into one message. No standard ROS equivalent exists; replacing would leak `px4_msgs` into the stack or require multiple messages.
+- [x] `GpsStatus.msg` — `sensor_msgs/NavSatFix` lacks `hdop`, `vdop`, `eph`, `epv`, `satellites_used` which `safety_monitor` and `frame_transforms` need for GPS health gating. Replacing would require NavSatFix + a supplementary message for no benefit.
+- [x] Both are thin translation layers published by `hardware_abstraction`, consumed by `safety_monitor`, `tui_status`, `frame_transforms`. Custom messages are justified.
 
 ### 5.3 Migrate to `generate_parameter_library`
 - **Problem:** Every node manually calls `declare_parameter` + `get_parameter` with hand-written defaults and validation. Drift between code defaults and YAML defaults is easy.
 - **Fix:** Define parameter schemas in YAML, generate type-safe C++ structs at build time. Single source of truth for names, types, defaults, ranges.
-- **Do after BT layer (Phase 7) is designed** — the BT will change what parameters each node needs.
-- [ ] Add `generate_parameter_library` build dependency
+- **Do before BT layer** — parameter surface is stable after Phases 0-4; BT adds a new node but doesn't change existing node params. Doing it now prevents drift during BT development and lets `peregrine_bt` use it from day one.
+- [x] Add `generate_parameter_library` to all Dockerfiles (`ros-${ROS_DISTRO}-generate-parameter-library`)
 - [ ] Convert `safety_monitor` parameters (highest ROI — 39 declarations)
 - [ ] Convert `uav_manager` parameters
 - [ ] Convert `control_manager` parameters
