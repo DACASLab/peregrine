@@ -16,4 +16,7 @@ docker/.env.local
 __pycache__/
 *.pyc
 
+# Auto-generated configs (regenerate with: make generate-gcs / make generate-multi)
+*.generated.*
+
 quad-firmware/
