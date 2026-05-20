@@ -48,7 +48,7 @@ make sim
 Starts one container (`sim`) with Gazebo + PX4 SITL. Opens an interactive bash shell. From there you can launch the flight stack manually:
 
 ```bash
-ros2 launch peregrine_bringup single_uav.launch.py
+ros2 launch peregrine_bringup core_stack.launch.py
 ```
 
 ### Dev shell

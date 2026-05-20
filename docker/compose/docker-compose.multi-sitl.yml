@@ -58,7 +58,7 @@ services:
         sleep 2 &&
         source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
         [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
-        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=1 microxrce_port:=8888 uav_namespace:=/uav1 target_system_id:=1 use_sim_time:=true
+        ros2 launch peregrine_bringup core_stack.launch.py start_microxrce_agent:=false ros_domain_id:=1 microxrce_port:=8888 uav_namespace:=/uav1 target_system_id:=1 use_sim_time:=true
       "
   # -- UAV 2: Peregrine stack + Zenoh bridge --------------------------------
   uav2:
@@ -81,7 +81,7 @@ services:
         sleep 2 &&
         source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
         [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
-        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=2 microxrce_port:=8890 uav_namespace:=/uav2 px4_namespace:=/px4_1 target_system_id:=2 use_sim_time:=true
+        ros2 launch peregrine_bringup core_stack.launch.py start_microxrce_agent:=false ros_domain_id:=2 microxrce_port:=8890 uav_namespace:=/uav2 px4_namespace:=/px4_1 target_system_id:=2 use_sim_time:=true
       "
   # -- UAV 3: Peregrine stack + Zenoh bridge --------------------------------
   uav3:
@@ -104,7 +104,7 @@ services:
         sleep 2 &&
         source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
         [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
-        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=3 microxrce_port:=8892 uav_namespace:=/uav3 px4_namespace:=/px4_2 target_system_id:=3 use_sim_time:=true
+        ros2 launch peregrine_bringup core_stack.launch.py start_microxrce_agent:=false ros_domain_id:=3 microxrce_port:=8892 uav_namespace:=/uav3 px4_namespace:=/px4_2 target_system_id:=3 use_sim_time:=true
       "
   # -- UAV 4: Peregrine stack + Zenoh bridge --------------------------------
   uav4:
@@ -127,7 +127,7 @@ services:
         sleep 2 &&
         source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
         [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
-        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=4 microxrce_port:=8894 uav_namespace:=/uav4 px4_namespace:=/px4_3 target_system_id:=4 use_sim_time:=true
+        ros2 launch peregrine_bringup core_stack.launch.py start_microxrce_agent:=false ros_domain_id:=4 microxrce_port:=8894 uav_namespace:=/uav4 px4_namespace:=/px4_3 target_system_id:=4 use_sim_time:=true
       "
   # -- UAV 5: Peregrine stack + Zenoh bridge --------------------------------
   uav5:
@@ -150,7 +150,7 @@ services:
         sleep 2 &&
         source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
         [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
-        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=5 microxrce_port:=8896 uav_namespace:=/uav5 px4_namespace:=/px4_4 target_system_id:=5 use_sim_time:=true
+        ros2 launch peregrine_bringup core_stack.launch.py start_microxrce_agent:=false ros_domain_id:=5 microxrce_port:=8896 uav_namespace:=/uav5 px4_namespace:=/px4_4 target_system_id:=5 use_sim_time:=true
       "
   # -- UAV 6: Peregrine stack + Zenoh bridge --------------------------------
   uav6:
@@ -173,5 +173,5 @@ services:
         sleep 2 &&
         source /opt/ros/${ROS_DISTRO:-humble}/setup.bash &&
         [ -f ${ROS_WS:-/ros2_ws}/install/setup.bash ] && source ${ROS_WS:-/ros2_ws}/install/setup.bash;
-        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:=6 microxrce_port:=8898 uav_namespace:=/uav6 px4_namespace:=/px4_5 target_system_id:=6 use_sim_time:=true
+        ros2 launch peregrine_bringup core_stack.launch.py start_microxrce_agent:=false ros_domain_id:=6 microxrce_port:=8898 uav_namespace:=/uav6 px4_namespace:=/px4_5 target_system_id:=6 use_sim_time:=true
       "

@@ -66,7 +66,7 @@ def build_uav_service(service_idx: int) -> str:
         sleep 2 &&
         source /opt/ros/${{ROS_DISTRO:-humble}}/setup.bash &&
         [ -f ${{ROS_WS:-/ros2_ws}}/install/setup.bash ] && source ${{ROS_WS:-/ros2_ws}}/install/setup.bash;
-        ros2 launch peregrine_bringup single_uav.launch.py start_microxrce_agent:=false ros_domain_id:={ros_domain_id} microxrce_port:={microxrce_port} uav_namespace:={uav_namespace}{px4_ns_arg} target_system_id:={target_system_id} use_sim_time:=true
+        ros2 launch peregrine_bringup core_stack.launch.py start_microxrce_agent:=false ros_domain_id:={ros_domain_id} microxrce_port:={microxrce_port} uav_namespace:={uav_namespace}{px4_ns_arg} target_system_id:={target_system_id} use_sim_time:=true
       "
 """
 
