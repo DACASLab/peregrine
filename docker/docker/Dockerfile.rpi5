@@ -120,6 +120,11 @@ RUN { \
     echo 'export ROS_DOMAIN_ID=${DRONE_ID:-0}'; \
 } >> /home/${CONTAINER_USER}/.bashrc
 
+# ── BehaviorTree.CPP v4 (Phase 7: BT package scaffolding) ───────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ros-${ROS_DISTRO}-behaviortree-cpp \
+    && rm -rf /var/lib/apt/lists/*
+
 USER ${CONTAINER_USER}
 WORKDIR ${ROS_WS}
 ENTRYPOINT ["/entrypoint.sh"]
