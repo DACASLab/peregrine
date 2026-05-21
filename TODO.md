@@ -93,7 +93,7 @@ Prepare `uav_manager` for a Behavior Tree application layer by removing orchestr
 ## Phase 2: C++ Codebase De-Sloping
 
 ### 2.1 ~~Nuke parameter boilerplate with `generate_parameter_library`~~
-- **Status:** Moved to Phase 5.3 — do after BT layer is designed so the parameter surface is stable.
+- **Status:** Complete — see Phase 5.3. All 7 nodes converted to `generate_parameter_library`.
 
 ### 2.2 Fix the "wait for topic" blocking anti-pattern
 - **Problem:** `on_configure()` blocks the lifecycle transition with `while` + `sleep_for(100ms)` waiting for PX4 topics. Appears in `control_manager`, `estimation_manager`, and `trajectory_manager`.
@@ -248,17 +248,16 @@ Prepare `uav_manager` for a Behavior Tree application layer by removing orchestr
 - [x] `GpsStatus.msg` — `sensor_msgs/NavSatFix` lacks `hdop`, `vdop`, `eph`, `epv`, `satellites_used` which `safety_monitor` and `frame_transforms` need for GPS health gating. Replacing would require NavSatFix + a supplementary message for no benefit.
 - [x] Both are thin translation layers published by `hardware_abstraction`, consumed by `safety_monitor`, `tui_status`, `frame_transforms`. Custom messages are justified.
 
-### 5.3 Migrate to `generate_parameter_library`
-- **Problem:** Every node manually calls `declare_parameter` + `get_parameter` with hand-written defaults and validation. Drift between code defaults and YAML defaults is easy.
-- **Fix:** Define parameter schemas in YAML, generate type-safe C++ structs at build time. Single source of truth for names, types, defaults, ranges.
-- **Do before BT layer** — parameter surface is stable after Phases 0-4; BT adds a new node but doesn't change existing node params. Doing it now prevents drift during BT development and lets `peregrine_bt` use it from day one.
+### 5.3 ~~Migrate to `generate_parameter_library`~~
+- **Status:** Complete. All 7 nodes converted. Parameter YAML schemas are now the single source of truth. Clean Docker build verified (15/15 packages, 0 errors).
 - [x] Add `generate_parameter_library` to all Dockerfiles (`ros-${ROS_DISTRO}-generate-parameter-library`)
-- [ ] Convert `safety_monitor` parameters (highest ROI — 39 declarations)
-- [ ] Convert `uav_manager` parameters
-- [ ] Convert `control_manager` parameters
-- [ ] Convert `trajectory_manager` parameters
-- [ ] Convert `estimation_manager` parameters
-- [ ] Convert `hardware_abstraction` parameters
+- [x] Convert `safety_monitor` parameters (33 params)
+- [x] Convert `uav_manager` parameters (9 params)
+- [x] Convert `control_manager` parameters (5 node-level params; SE3 controller uses `declareOrGet` plugin pattern, stays manual)
+- [x] Convert `trajectory_manager` parameters (4 params)
+- [x] Convert `estimation_manager` parameters (4 params)
+- [x] Convert `hardware_abstraction` parameters (7 params)
+- [x] Convert `frame_transforms` parameters (14 params)
 - [ ] Delete per-package `defaults.yaml` — schema files become the source of truth
 
 ### 5.4 Add missing test coverage
