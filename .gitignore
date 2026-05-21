@@ -20,3 +20,6 @@ __pycache__/
 *.generated.*
 
 quad-firmware/
+
+# SITL regression artifacts
+artifacts/

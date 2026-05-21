@@ -110,7 +110,7 @@ services:
       bash -lc "
         source /opt/ros/${{ROS_DISTRO:-humble}}/setup.bash &&
         [ -f ${{ROS_WS:-/ros2_ws}}/install/setup.bash ] && source ${{ROS_WS:-/ros2_ws}}/install/setup.bash;
-        ros2 launch peregrine_bringup multi_uav_sitl.launch.py num_uavs:={num_uavs} px4_gz_world:=${{PX4_GZ_WORLD:-default}} uav_spawn_spacing_m:=${{UAV_SPAWN_SPACING_M:-5.0}} px4_base_delay:=${{PX4_BASE_DELAY:-8.0}} px4_stagger_delay:=${{PX4_STAGGER_DELAY:-5.0}} headless:=0
+        ros2 launch peregrine_bringup multi_uav_sitl.launch.py num_uavs:={num_uavs} px4_gz_world:=${{PX4_GZ_WORLD:-default}} uav_spawn_spacing_m:=${{UAV_SPAWN_SPACING_M:-5.0}} px4_base_delay:=${{PX4_BASE_DELAY:-8.0}} px4_stagger_delay:=${{PX4_STAGGER_DELAY:-5.0}} headless:=${{HEADLESS:-1}}
       "
 
 {uav_services}"""
