@@ -267,8 +267,8 @@ Prepare `uav_manager` for a Behavior Tree application layer by removing orchestr
 
 ### 5.5 Document launch architecture decisions
 - [ ] Add a decision matrix: when to use single-container vs two-container vs three-container
-- [ ] Document the temporal hierarchy (hard RT, soft RT, reflexes, BT) in an ARCHITECTURE.md
-- [ ] Document the FSM vs BT separation of concerns
+- [x] Document the temporal hierarchy (hard RT, soft RT, reflexes, BT) in `docs/ARCHITECTURE.md`
+- [x] Document the FSM vs BT separation of concerns in `docs/ARCHITECTURE.md`
 
 ---
 
@@ -294,216 +294,148 @@ The BT becomes the "pilot" — it reads UAV state, decides intent, and ticks act
 
 **Prerequisite:** Phases 0-1 must be complete. Phase 2 strongly recommended (removes blocking anti-patterns that would interfere with BT tick timing).
 
-### 7.1 Create the `peregrine_bt` package
+### 7.1 ~~Create the `peregrine_bt` package~~
+- **Status:** Complete. Package created with BT.CPP v4 + official `behaviortree_ros2` bridge.
 - **Library:** [BehaviorTree.CPP v4](https://github.com/BehaviorTree/BehaviorTree.CPP) — the de facto standard for ROS 2 BT applications.
-- [ ] Add `behaviortree_cpp` as a dependency (available via `apt` on most ROS 2 distros)
-- [ ] Create `peregrine_bt` package with `CMakeLists.txt`, `package.xml`
-- [ ] Verify BT.CPP v4 builds against current ROS 2 distribution (Humble)
-- [ ] Add package to `core_stack.launch.py` as an optional composable node (disabled by default via launch argument)
-- [ ] Verify the package builds in the Docker simulation image
+- **Bridge:** [BehaviorTree.ROS2](https://github.com/BehaviorTree/BehaviorTree.ROS2) — official ROS 2 integration by the BT.CPP author. Provides `RosActionNode<T>`, `RosServiceNode<T>`, `RosTopicSubNode<T>`, `RosTopicPubNode<T>` base templates. Not available via apt for Humble — cloned as a git submodule in `src/behaviortree_ros2`.
+- **Process isolation:** The BT executor runs as a **separate process**, not a composable node in the core stack container. See `docs/ARCHITECTURE.md` for rationale. Launch integration comes in Phase 9.5 via `bt_mission.launch.py`.
+- [x] Add `behaviortree_cpp` as a dependency (available via `apt` on Humble)
+- [x] Add `behaviortree_ros2` as a git submodule in `src/` (not on apt for Humble)
+- [x] Create `peregrine_bt` package with `CMakeLists.txt`, `package.xml`
+- [x] Delete empty `mission_executor` skeleton (replaced by `peregrine_bt`)
+- [x] Verify BT.CPP v4 (4.9.0) builds against ROS 2 Humble
+- [x] Verify the package builds in the Docker simulation image (19 packages, 0 errors)
 
-### 7.2 Design the BT-ROS 2 bridge layer
-The BT needs thin wrappers that map BT action/condition nodes to ROS 2 clients. These must be generic and reusable — mission-specific logic belongs in the tree XML, not in bridge code.
-
-#### 7.2.1 `RosActionNode<T>` base template
-- [ ] Wraps `rclcpp_action::Client<T>`, handles goal send/cancel/result as BT RUNNING/SUCCESS/FAILURE
-- [ ] On `onStart()`: send goal asynchronously, return RUNNING
-- [ ] On `onRunning()`: check goal handle status — RUNNING if still executing, SUCCESS/FAILURE on result
-- [ ] On `onHalted()`: cancel the goal if still active (BT tree pre-emption)
-- [ ] Timeout: configurable per-node via BT port, returns FAILURE on expiry
-- [ ] Error mapping: goal rejected → FAILURE, goal aborted → FAILURE with error code on blackboard
-
-#### 7.2.2 `RosServiceNode<T>` base template
-- [ ] Wraps `rclcpp::Client<T>` for synchronous-style service calls
-- [ ] On `onStart()`: send request asynchronously, return RUNNING
-- [ ] On `onRunning()`: poll future — SUCCESS when response arrives, FAILURE on timeout or service error
-- [ ] On `onHalted()`: no cancel needed (services are fire-and-forget), just stop polling
-- [ ] Service availability: FAILURE immediately if service is not available (no blocking wait)
-
-#### 7.2.3 `RosTopicCondition<T>` base template
-- [ ] Subscribes to a topic, caches latest message via atomic shared_ptr (same pattern as existing telemetry caching)
-- [ ] Exposes latest value to BT blackboard on each tick
-- [ ] Staleness check: configurable max age — if latest message is older than threshold, condition returns FAILURE
-- [ ] Subscription is created once at node construction, not per-tick
-
-#### 7.2.4 Blackboard conventions
-- [ ] Define standard blackboard key names: `uav_state`, `safety_status`, `estimated_state`, `battery_state`, `gps_status`
-- [ ] Define typed port conventions: input ports for parameters (altitude, radius), output ports for results (error codes, final positions)
-- [ ] Document thread safety: blackboard writes only from subscriber callbacks or tick thread, never both for the same key
+### 7.2 ~~BT-ROS 2 bridge layer~~
+- **Status:** Superseded — using the official `behaviortree_ros2` package instead of custom templates. The official library provides `RosActionNode<T>`, `RosServiceNode<T>`, `RosTopicSubNode<T>` with client reuse via static registry, proper error enums, callback group isolation, and non-blocking async execution.
+- [x] `RosActionNode<T>` — provided by `behaviortree_ros2`
+- [x] `RosServiceNode<T>` — provided by `behaviortree_ros2`
+- [x] `RosTopicSubNode<T>` — provided by `behaviortree_ros2`
+- [x] Blackboard conventions — not needed; the official library uses typed input/output ports per node and `default_port_value` in `RosNodeParams` for topic/action/service names
 
 ### 7.3 Groot2 visualization setup
+- **Deferred** until mission trees are implemented and testable in SITL (Phase 9/10). The `behaviortree_ros2` `TreeExecutionServer` has built-in Groot2 publisher support.
 - [ ] Verify Groot2 compatibility with BT.CPP v4 version
-- [ ] Create a `groot2_publisher` integration in the BT executor node (ZMQ-based tree status broadcast)
+- [ ] Enable Groot2 publisher in the BT executor node
 - [ ] Document how to connect Groot2 to a running BT for live visualization
-- [ ] Create a convenience launch argument (`enable_groot:=true`) to activate the publisher
 
 ---
 
 ## Phase 8: BT Node Implementation
 
-Each BT node is a thin adapter between the tree and a specific ROS 2 interface. No business logic — if a node needs more than ~30 lines beyond the base template, the complexity likely belongs in the ROS 2 server, not the BT node.
+Each BT node is a thin adapter between the tree and a specific ROS 2 interface. No business logic — if a node needs more than ~30 lines beyond the base template, the complexity likely belongs in the ROS 2 server, not the BT node. All nodes use the official `behaviortree_ros2` base templates.
 
-### 8.1 Condition nodes (pure readers)
-These check world state and return SUCCESS/FAILURE. They do NOT send commands or modify state.
+### 8.1 ~~Condition nodes (pure readers)~~
+- **Status:** Complete. 15 condition nodes implemented as `RosTopicSubNode<T>` subclasses.
 
-#### 8.1.1 UAV state conditions
-- [ ] `IsArmed` — reads `UAVState.armed`
-- [ ] `IsFlying` — reads `UAVState.supervisor_state == FLYING`
-- [ ] `IsLanded` — reads `UAVState.supervisor_state == LANDED_DISARMED` or `LANDED_ARMED`
-- [ ] `IsDependenciesReady` — reads `UAVState.dependencies_ready`
-- [ ] `HasValidState` — checks `estimated_state` freshness (message age < threshold)
+#### 8.1.1 ~~UAV state conditions~~ (subscribe to `uav_state`)
+- [x] `IsArmed` — reads `UAVState.armed`
+- [x] `IsFlying` — reads `UAVState.state == FLYING` or `HOVERING`
+- [x] `IsLanded` — reads `UAVState.state == IDLE` or `LANDED`
+- [x] `IsDependenciesReady` — reads `UAVState.dependencies_ready`
+- [x] `IsEmergency` — reads `UAVState.state == EMERGENCY` (added — needed for reactive tree guards)
+- [x] `IsConnected` — reads `UAVState.connected` (added — needed to detect PX4 disconnect)
+- [x] `IsOffboard` — reads `UAVState.offboard` (added — useful pre-trajectory check)
 
-#### 8.1.2 Safety conditions
-- [ ] `IsSafetyNominal` — reads `SafetyStatus.overall_level == NOMINAL`
-- [ ] `IsSafetyAtLeast(level)` — parameterized: returns SUCCESS if safety level >= input port value (allows trees to tolerate WARN but not CRITICAL)
+#### 8.1.2 ~~Safety conditions~~ (subscribe to `safety_status`)
+- [x] `IsSafetyNominal` — reads `SafetyStatus.level == NOMINAL`
+- [x] `IsSafetyAtLeast(max_level)` — returns SUCCESS if `level <= max_level` input port
 
-#### 8.1.3 Sensor conditions
-- [ ] `IsBatteryAbove(threshold_pct)` — reads battery percentage against input port threshold
-- [ ] `IsGpsHealthy` — reads GPS fix type >= 3D fix
-- [ ] `IsGpsHdopBelow(threshold)` — reads GPS HDOP against input port threshold
+#### 8.1.3 ~~Sensor conditions~~
+- [x] `IsBatteryAbove(threshold_pct)` — reads `PX4Status.battery_remaining` (subscribes to `status`)
+- [x] `IsGpsHealthy(min_fix_type, max_hdop, max_vdop)` — reads fix type, HDOP, and VDOP (subscribes to `gps_status`). Merged `IsGpsHdopBelow` — separate node was unnecessary.
 
-#### 8.1.4 Position conditions
-- [ ] `IsAtPosition(target, tolerance_m)` — compares current position to blackboard target within tolerance
-- [ ] `IsAboveAltitude(min_alt_m)` — checks current altitude against threshold
-- [ ] `IsBelowAltitude(max_alt_m)` — checks current altitude against ceiling
+#### 8.1.4 ~~Position conditions~~ (subscribe to `state` — estimated state)
+- [x] `HasValidState(max_age_s)` — checks estimated state freshness via header timestamp
+- [x] `IsAtPosition(target_x, target_y, target_z, tolerance_m)` — 3D Euclidean distance check
+- [x] `IsAboveAltitude(min_alt_m)` — checks `pose.position.z`
+- [x] `IsBelowAltitude(max_alt_m)` — checks `pose.position.z`
 
-### 8.2 Action nodes (effectors)
-These call ROS 2 actions/services and report progress. All must be async (return RUNNING, not block).
+### 8.2 ~~Action and service nodes (effectors)~~
+- **Status:** Complete. 4 action nodes, 3 service nodes, 1 utility node.
 
-#### 8.2.1 Flight lifecycle actions
-- [ ] `ArmAction` — calls `uav_manager/arm` service via `RosServiceNode<Arm>`
-- [ ] `TakeoffAction(altitude_m, climb_velocity_mps)` — calls `uav_manager/takeoff` action via `RosActionNode<Takeoff>`, exposes feedback (current altitude) on blackboard
-- [ ] `LandAction(descent_velocity_mps)` — calls `uav_manager/land` action via `RosActionNode<Land>`, exposes feedback (altitude remaining) on blackboard
+#### 8.2.1 ~~Flight lifecycle~~
+- [x] `ArmService` — calls `arm` service via `RosServiceNode<Arm>` (on `hardware_abstraction`)
+- [x] `TakeoffAction(altitude_m, climb_velocity_mps)` — calls `uav_manager/takeoff` action, output port `final_altitude_m`
+- [x] `LandAction(descent_velocity_mps)` — calls `uav_manager/land` action
 
-#### 8.2.2 Trajectory actions
-- [ ] `ExecuteTrajectoryAction(type, params...)` — calls `trajectory_manager/execute_trajectory` directly (NOT through uav_manager — that forwarding was removed in Phase 1)
-- [ ] Input ports: `trajectory_type` (string), plus type-specific ports (`radius`, `angular_velocity`, `loops`, `step_size`, etc.)
-- [ ] Output ports: `completion_error_m` (final position error at trajectory end)
-- [ ] Feedback: expose `progress_pct` on blackboard for monitoring
+#### 8.2.2 ~~Trajectory actions~~
+- [x] `ExecuteTrajectoryAction(trajectory_type, params)` — calls `trajectory_manager/execute_trajectory`. Params passed as comma-separated string, parsed to `float64[]`.
+- [x] `GoToAction(x, y, z, yaw, velocity_mps)` — calls `trajectory_manager/go_to` (added — GoTo is an actively used action, was missing from original TODO)
 
-#### 8.2.3 Mode and recovery actions
-- [ ] `SetModeAction(mode)` — calls `hardware_abstraction/set_mode` service
-- [ ] `ClearEmergencyAction` — calls `uav_manager/clear_emergency` service (added in Phase 1.3)
+#### 8.2.3 ~~Mode and recovery~~
+- [x] `SetModeService(mode)` — calls `set_mode` service (on `hardware_abstraction`)
+- [x] `ClearEmergencyService` — calls `uav_manager/clear_emergency` service
 
-#### 8.2.4 Utility actions
-- [ ] `WaitAction(duration_s)` — simple timer-based wait, returns RUNNING until duration elapsed, uses ROS clock (not wall clock) for sim-time compatibility
-- [ ] `LogAction(message, level)` — publishes a RCLCPP log message at configurable severity (useful for debugging trees)
-- [ ] `SetBlackboardAction(key, value)` — writes a value to the blackboard (useful for parameterizing subtrees)
+#### 8.2.4 ~~Utility~~
+- [x] `WaitAction(duration_s)` — `StatefulActionNode` with ROS clock deadline (sim-time compatible)
+- ~~`LogAction`~~ — dropped; BT.CPP v4 built-in `StdCoutLogger` and script nodes cover this
+- ~~`SetBlackboardAction`~~ — dropped; BT.CPP v4 has a built-in `SetBlackboard` node
 
-### 8.3 BT node registration and plugin discovery
-- [ ] Register all nodes with the `BT::BehaviorTreeFactory` using `registerNodeType<>()`
-- [ ] Organize registrations in a single `register_nodes.cpp` file so new nodes are easy to find
-- [ ] Add `BT_REGISTER_NODES` macro export for potential plugin-based loading (future: user-defined nodes without recompiling `peregrine_bt`)
-- [ ] Verify all nodes appear in Groot2's node palette
+### 8.3 ~~BT node registration~~
+- **Status:** Complete. All 23 nodes registered in `register_nodes.cpp` with default topic/action/service names via `RosNodeParams`.
+- [x] All nodes registered with `BT::BehaviorTreeFactory` using `registerNodeType<>()`
+- [x] Registrations organized in `register_nodes.cpp` with default `RosNodeParams` per node
+- [ ] Add `BT_REGISTER_NODES` macro export for plugin-based loading (deferred — not needed until user-defined BT nodes)
 
 ---
 
 ## Phase 9: Mission Trees & BT Executor
 
-### 9.1 BT executor node (`PeregrineBTNode`)
-The executor is a ROS 2 lifecycle node that loads a tree XML, ticks it, and publishes status. It owns the `rclcpp::Node` that all BT nodes share for subscriptions and clients.
-
-- [ ] Create `PeregrineBTNode` as a lifecycle node
-- [ ] Parameter: `tree_file` (string) — path to the XML tree to execute
-- [ ] Parameter: `tick_rate_hz` (double, default 2.0) — BT tick frequency
-- [ ] On `on_configure()`: load XML, register all node types, create the tree
-- [ ] On `on_activate()`: start the tick timer
-- [ ] On `on_deactivate()`: halt the tree (calls `onHalted()` on all active action nodes), cancel tick timer
+### 9.1 ~~BT executor node (`BTExecutorNode`)~~
+- **Status:** Complete. Lifecycle node with tick timer, shared client node, and `MultiThreadedExecutor`.
+- [x] Create `BTExecutorNode` as a lifecycle node
+- [x] Parameter: `tree_file` (string) — path to the XML tree to execute
+- [x] Parameter: `tick_rate_hz` (double, default 2.0) — BT tick frequency
+- [x] On `on_configure()`: load XML, register all node types via `registerAllNodes()`, create tree
+- [x] On `on_activate()`: start the tick timer
+- [x] On `on_deactivate()`: halt the tree, cancel tick timer
+- [x] Graceful shutdown: `on_shutdown()` halts tree and cleans up
 - [ ] Publish tree status on `bt_status` topic each tick (current state of root, number of RUNNING nodes, active action names)
-- [ ] Graceful shutdown: on deactivation or SIGINT, halt active actions before destroying tree
 
-### 9.2 Shared ROS node design
-BT.CPP nodes need access to a `rclcpp::Node` for creating subscriptions and clients. The design must avoid creating hundreds of nodes.
-
-- [ ] Single shared `rclcpp::Node` (or the executor node itself) passed to all BT nodes via the blackboard
-- [ ] All subscriptions created at tree creation time, not per-tick
-- [ ] All action/service clients created at tree creation time with lazy connection (connect on first use)
-- [ ] Document: the shared node runs in the executor's callback group — BT nodes must not block callbacks
+### 9.2 ~~Shared ROS node design~~
+- **Status:** Complete. Separate `rclcpp::Node` ("bt_client") created in the executor constructor, shared to all BT nodes via `RosNodeParams`. Both nodes added to a `MultiThreadedExecutor`.
+- [x] Single shared `rclcpp::Node` passed to all BT nodes via `RosNodeParams`
+- [x] The `behaviortree_ros2` library handles subscription/client reuse via static registries — multiple nodes subscribing to the same topic share one subscription
+- [x] `MultiThreadedExecutor` spins both the lifecycle node and the client node
+- [x] Forward `use_sim_time` from the lifecycle node to the client node — required for correct `node->now()` in SITL (affects `HasValidState` timestamp comparison and `WaitAction` deadline)
 
 ### 9.3 Core mission trees (XML)
 Start with simple trees that replicate existing demo scripts, then build up complexity. Each tree file lives in `peregrine_bt/trees/`.
 
-#### Tree 1: `takeoff_hover_land.xml` — Smoke test
-```
-<BehaviorTree ID="TakeoffHoverLand">
-  <Sequence>
-    <IsDependenciesReady/>
-    <ArmAction/>
-    <TakeoffAction altitude_m="5.0" climb_velocity_mps="1.0"/>
-    <WaitAction duration_s="10.0"/>
-    <LandAction descent_velocity_mps="0.8"/>
-  </Sequence>
-</BehaviorTree>
-```
-- [ ] Implement and validate in SITL
-- [ ] Verify arm, takeoff, hover, land sequence completes without error
+#### ~~Tree 1: `takeoff_hover_land.xml` — Smoke test~~
+- **Status:** Complete. Sequence: IsDependenciesReady → TakeoffAction → WaitAction 10s → LandAction.
+- [x] Tree XML implemented
+- [ ] Validate in SITL
 - [ ] Verify BT status topic shows correct state transitions
 
-#### Tree 2: `circle_with_safety.xml` — Reactive safety fallback
-```
-<BehaviorTree ID="CircleWithSafety">
-  <ReactiveFallback>
-    <ReactiveSequence>
-      <IsSafetyNominal/>
-      <Sequence>
-        <IsDependenciesReady/>
-        <ArmAction/>
-        <TakeoffAction altitude_m="5.0" climb_velocity_mps="1.0"/>
-        <ExecuteTrajectoryAction trajectory_type="circle" radius="2.0"
-                                 angular_velocity="0.6" loops="2"/>
-        <LandAction descent_velocity_mps="0.8"/>
-      </Sequence>
-    </ReactiveSequence>
-    <Sequence name="SafetyLand">
-      <LogAction message="Safety degraded — emergency land" level="WARN"/>
-      <LandAction descent_velocity_mps="1.0"/>
-    </Sequence>
-  </ReactiveFallback>
-</BehaviorTree>
-```
-- [ ] Implement and validate in SITL
+#### ~~Tree 2: `circle_with_safety.xml` — Reactive safety fallback~~
+- **Status:** Complete. ReactiveFallback with safety guard around mission sequence, safety land fallback.
+- [x] Tree XML implemented
+- [ ] Validate in SITL
 - [ ] Test: trigger a geofence warning mid-circle, verify BT switches to safety land
-- [ ] Test: verify normal completion when no safety events occur
 
-#### Tree 3: `multi_trajectory.xml` — Circle + figure-8 with retry
-```
-<BehaviorTree ID="MultiTrajectory">
-  <Sequence>
-    <SubTree ID="ArmAndTakeoff" altitude_m="5.0"/>
-    <RetryNode num_attempts="3">
-      <ExecuteTrajectoryAction trajectory_type="circle" radius="2.0"
-                               angular_velocity="0.6" loops="1"/>
-    </RetryNode>
-    <RetryNode num_attempts="3">
-      <ExecuteTrajectoryAction trajectory_type="figure8" radius="2.0"
-                               angular_velocity="0.6" loops="1"/>
-    </RetryNode>
-    <LandAction descent_velocity_mps="0.8"/>
-  </Sequence>
-</BehaviorTree>
-```
-- [ ] Implement with a reusable `ArmAndTakeoff` subtree
+#### ~~Tree 3: `multi_trajectory.xml` — Circle + figure-8 with retry~~
+- **Status:** Complete. Uses `PreflightAndTakeoff` subtree, RetryNode(3) for each trajectory.
+- [x] Tree XML implemented with reusable `PreflightAndTakeoff` subtree
 - [ ] Validate in SITL — verify retry on trajectory failure
-- [ ] Verify that a failed trajectory followed by a retry does not leave stale state on the blackboard
 
-#### Tree 4: `controller_switch_demo.xml` — Replace controller_switch_demo.py
-- [ ] Replicate the existing controller switch demo as a BT tree
-- [ ] Sequence: takeoff → switch to SE3 → circle → switch back to passthrough → land
-- [ ] Verify controller switch mid-flight works correctly through BT action nodes
+#### ~~Tree 4: `controller_switch_demo.xml` — Controller switch~~
+- **Status:** Complete. Sequence: IsDependenciesReady → TakeoffAction → SetModeService(se3) → circle → SetModeService(passthrough) → LandAction.
+- [x] Tree XML implemented
+- [ ] Validate in SITL — verify controller switch mid-flight
 
-### 9.4 Subtree library
-Common patterns extracted into reusable subtrees that missions compose via `<SubTree>`.
-- [ ] `ArmAndTakeoff` — IsDependenciesReady → Arm → Takeoff (parameterized altitude)
-- [ ] `SafetyLand` — LogAction → LandAction (used as fallback in reactive trees)
-- [ ] `PreflightChecks` — IsDependenciesReady → IsBatteryAbove → IsGpsHealthy → IsSafetyNominal
-- [ ] Store subtrees in `peregrine_bt/trees/subtrees/`
-- [ ] Document how to compose subtrees into custom missions
+### 9.4 ~~Subtree library~~
+- **Status:** Complete. Two reusable subtrees in `peregrine_bt/trees/subtrees/`.
+- [x] `PreflightAndTakeoff` — IsDependenciesReady → IsBatteryAbove → IsGpsHealthy → IsSafetyNominal → TakeoffAction with `{altitude_m}` blackboard port
+- [x] `PreflightChecks` — same checks without takeoff (standalone preflight gate)
+- [x] Stored in `peregrine_bt/trees/subtrees/`
 
-### 9.5 Launch integration
-- [ ] Add `enable_bt` launch argument to `core_stack.launch.py` (default: false)
-- [ ] When enabled, launch `PeregrineBTNode` as a composable node in the manager container
-- [ ] Add `tree_file` and `tick_rate_hz` as launch arguments
-- [ ] Create `bt_mission.launch.py` convenience launcher: includes `core_stack.launch.py` with `enable_bt:=true` and accepts a tree file path
+### 9.5 ~~Launch integration~~
+- **Status:** Complete. `bt_mission.launch.py` created in `peregrine_bringup`.
+- [x] Create `bt_mission.launch.py`: includes `core_stack.launch.py` (optional via `start_core_stack` arg), launches `BTExecutorNode` as a `LifecycleNode` (separate process)
+- [x] Launch arguments: `tree_file` (required), `tick_rate_hz` (default 2.0), `start_core_stack` (default true — set false when stack is already running on hardware)
+- [x] `core_stack.launch.py` unchanged — all its args pass through from `bt_mission.launch.py`
 
 ---
 
@@ -517,17 +449,14 @@ The BT operates at the **slowest layer** (1-10Hz). It must NOT:
 - Assume tick timing is deterministic (use timeouts, not tick counts)
 
 - [ ] All action nodes verified async (return RUNNING, never block tick thread)
-- [ ] All condition nodes verified non-blocking (read cached blackboard values only)
-- [ ] Blackboard values updated by dedicated subscriber callbacks, NOT during tick
+- [ ] All condition nodes verified non-blocking (read cached subscriber values via `behaviortree_ros2` registry, not per-tick subscriptions)
 - [ ] Document the tick rate contract: "BT is safe to stutter or pause without affecting flight safety — the FSM and safety_monitor handle real-time concerns"
 - [ ] Measure worst-case tick duration under load — must stay under 50ms at 2Hz tick rate
 
 ### 10.2 Unit tests
-- [ ] Test each condition node in isolation: mock ROS topic data on blackboard, verify SUCCESS/FAILURE thresholds
+- [ ] Test each condition node in isolation: mock ROS topic data, verify SUCCESS/FAILURE thresholds
 - [ ] Test each action node in isolation: mock ROS action/service server, verify RUNNING→SUCCESS and RUNNING→FAILURE paths
-- [ ] Test `RosActionNode<T>` base: verify goal cancellation on `onHalted()`, timeout behavior, error code propagation
-- [ ] Test `RosServiceNode<T>` base: verify service-unavailable returns FAILURE (no hang), timeout behavior
-- [ ] Test blackboard staleness: verify condition nodes return FAILURE when cached data is older than threshold
+- [ ] Test condition nodes return FAILURE when no message has been received (null message path)
 
 ### 10.3 Integration tests (SITL)
 - [ ] Full stack smoke test: SITL + core_stack + BT executor, run Tree 1, verify takeoff/hover/land
@@ -549,21 +478,40 @@ The BT operates at the **slowest layer** (1-10Hz). It must NOT:
 - [ ] TUI integration: add BT status panel to `tui_status` showing current tree state, active action, tick rate
 - [ ] `bt_status` topic documented: message format, update rate, how to interpret states
 
-### 10.6 Demo script migration
-Once BT trees replicate existing demo behavior, migrate demos from Python scripts to BT XML + launcher.
-- [ ] `circle_figure8_demo.py` → `circle_figure8.xml` + `bt_mission.launch.py tree_file:=...`
-- [ ] `multi_cycle_demo.py` → `multi_trajectory.xml`
-- [ ] `controller_switch_demo.py` → `controller_switch_demo.xml`
-- [ ] `controller_switch_inflight_demo.py` → `controller_switch_inflight.xml`
-- [ ] `step_response_demo.py` → `step_response.xml`
-- [ ] Keep Python scripts as reference/fallback until BT trees are validated in SITL
-- [ ] Delete Python demo scripts after BT equivalents are validated (or mark deprecated)
-
-### 10.7 Documentation
+### 10.6 Documentation
 - [ ] `peregrine_bt/README.md`: package overview, how to write a custom tree, how to add new BT nodes
-- [ ] Document the FSM vs BT separation of concerns: what the FSM owns (flight state, safety gates) vs what the BT owns (mission sequencing, recovery logic)
-- [ ] Document the temporal hierarchy (hard RT at 250Hz → soft RT at 50Hz → reflexes at 2Hz → BT at 1-10Hz)
+- [x] Document the FSM vs BT separation of concerns — see `docs/ARCHITECTURE.md`
+- [x] Document the temporal hierarchy — see `docs/ARCHITECTURE.md`
 - [ ] Add example: "How to create a new mission" walkthrough (copy a tree XML, customize parameters, launch)
+
+---
+
+## Phase 11: TUI Command Interface (GCS → UAV)
+
+Add command capability to the TUI so operators can send basic flight commands from the GCS terminal. Currently the GCS is read-only (Zenoh bridges only carry topics UAV → GCS). This phase opens the reverse path for actions and services.
+
+### 11.1 Zenoh bridge allow-list updates
+Open the existing Zenoh bridges to carry actions and services GCS → UAV. No new bridges or containers needed.
+
+- [ ] `uav_bridge.json5`: add `action_servers` entries (`".*/uav_manager/takeoff"`, `".*/uav_manager/land"`)
+- [ ] `uav_bridge.json5`: add `service_servers` entries (`".*/arm"`, `".*/set_mode"`, `".*/uav_manager/clear_emergency"`)
+- [ ] `generate_gcs_config.py`: add matching `action_clients` and `service_clients` to the GCS bridge template
+- [ ] Regenerate `gcs_bridge.generated.json5`
+- [ ] Verify round-trip: GCS action client → Zenoh → UAV action server (test with `ros2 action send_goal` from GCS container)
+
+### 11.2 TUI command clients
+Add action and service clients to `tui_node`. The TUI already has the correct `uav_namespace` parameter — clients resolve under the same namespace.
+
+- [ ] Add action clients: `uav_manager/takeoff`, `uav_manager/land`
+- [ ] Add service clients: `arm`, `set_mode`, `uav_manager/clear_emergency`
+- [ ] Non-blocking dispatch: send goal/request, track status, never block the TUI render loop
+- [ ] Command timeout handling (Zenoh latency + server responsiveness)
+
+### 11.3 TUI keybindings and display
+- [ ] Keybindings: `T`=takeoff, `L`=land, `A`=arm/disarm, `M`=cycle mode, `E`=clear emergency
+- [ ] Confirmation for destructive commands (double-press or shift key for arm/takeoff)
+- [ ] Command status line in footer: show pending command, result (SUCCESS/FAILURE/TIMEOUT)
+- [ ] Update footer help text with new keybindings
 
 ---
 
@@ -578,7 +526,8 @@ Once BT trees replicate existing demo behavior, migrate demos from Python script
 | Phase 4: Launch & Python overhaul | 1-2 weeks | Medium |
 | Phase 5: Interface & architecture cleanup | 3-4 days | Medium |
 | Phase 6: Production readiness | 2-3 days | Before hardware flight |
-| Phase 7: BT package scaffolding & bridge | 1-2 weeks | After Phases 0-2 |
-| Phase 8: BT node implementation | 1-2 weeks | After Phase 7 |
-| Phase 9: Mission trees & executor | 1-2 weeks | After Phase 8 |
+| Phase 7: BT package scaffolding & bridge | ~~1-2 weeks~~ **Done** | After Phases 0-2 |
+| Phase 8: BT node implementation | ~~1-2 weeks~~ **Done** | After Phase 7 |
+| Phase 9: Mission trees & executor | ~~1-2 weeks~~ **Done** | After Phase 8 |
 | Phase 10: BT testing & operational readiness | 1-2 weeks | After Phase 9 |
+| Phase 11: TUI command interface | 2-3 days | Optional / after Phase 10 |
