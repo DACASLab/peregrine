@@ -56,6 +56,7 @@ class Case:
     timeout_s: int
     expect: Expectation
     tree: str | None = None
+    tree_id: str | None = None
     launch_package: str | None = None
     launch_file: str | None = None
     launch_args: dict[str, str] = field(default_factory=dict)
@@ -68,6 +69,7 @@ CASES: dict[str, Case] = {
         suite="bt",
         kind="bt",
         tree="takeoff_hover_land.xml",
+        tree_id="TakeoffHoverLand",
         timeout_s=120,
         expect=Expectation(require_bt_success=True),
     ),
@@ -76,6 +78,7 @@ CASES: dict[str, Case] = {
         suite="bt",
         kind="bt",
         tree="circle_with_safety.xml",
+        tree_id="CircleWithSafety",
         timeout_s=180,
         expect=Expectation(require_bt_success=True),
     ),
@@ -84,6 +87,7 @@ CASES: dict[str, Case] = {
         suite="bt",
         kind="bt",
         tree="controller_switch_demo.xml",
+        tree_id="ControllerSwitchDemo",
         timeout_s=180,
         expect=Expectation(require_bt_success=True),
     ),
@@ -92,6 +96,7 @@ CASES: dict[str, Case] = {
         suite="bt",
         kind="bt",
         tree="multi_trajectory.xml",
+        tree_id="MultiTrajectory",
         timeout_s=220,
         expect=Expectation(require_bt_success=True),
     ),
@@ -342,7 +347,7 @@ def cleanup_container_processes() -> None:
     patterns = [
         "ros2 launch peregrine_bringup",
         "ros2 launch hardware_abstraction_example",
-        "/ros2_ws/install/peregrine_bt/lib/peregrine_bt/bt_executor_node",
+        "/ros2_ws/install/peregrine_bt/lib/peregrine_bt/peregrine_tree_server",
         "component_container_mt",
         "MicroXRCEAgent",
         "make px4_sitl gz_x500",
@@ -573,21 +578,24 @@ def evaluate(
 
     if case.kind == "bt":
         if configure_rc is not None and configure_rc != 0:
-            failures.append(f"BT lifecycle configure failed (rc={configure_rc})")
+            failures.append(f"BT configure failed (rc={configure_rc})")
         if activate_rc is not None and activate_rc != 0:
-            failures.append(f"BT lifecycle activate failed (rc={activate_rc})")
+            failures.append(f"BT activate failed (rc={activate_rc})")
 
     max_z = observation.get("max_z")
     last_z = observation.get("last_z")
     last_uav = observation.get("last_uav") or {}
 
-    if expect.require_tree_load:
-        bt_log = read_log(logs.get("bt", Path()))
-        if "Failed to load tree" in bt_log or "Node not recognized" in bt_log:
+    if expect.require_tree_load and "bt" in logs:
+        bt_text = read_log(logs["bt"])
+        if "Failed to load" in bt_text or "Node not recognized" in bt_text:
             failures.append("BT tree failed to load")
     if expect.require_bt_success:
-        bt_log = read_log(logs.get("bt", Path()))
-        if "Tree completed with SUCCESS" not in bt_log:
+        bt_text = read_log(logs["bt"]) if "bt" in logs else ""
+        goal_text = read_log(logs["goal"]) if "goal" in logs else ""
+        if ("Tree finished with status: SUCCESS" not in bt_text
+                and "Tree completed with SUCCESS" not in bt_text
+                and "SUCCEEDED" not in goal_text):
             failures.append("BT did not complete with SUCCESS")
     if expect.require_process_success and process_rc not in (0, None):
         failures.append(f"mission process exited with rc={process_rc}")
@@ -607,10 +615,10 @@ def evaluate(
 def summarize_bt_log(path: Path) -> dict[str, Any]:
     text = read_log(path)
     return {
-        "loaded": "Loaded tree" in text,
-        "success": "Tree completed with SUCCESS" in text,
-        "failure": "Tree completed with FAILURE" in text,
-        "failed_to_load": "Failed to load tree" in text,
+        "loaded": "Loaded BehaviorTree" in text or "Tree '" in text,
+        "success": "Tree finished with status: SUCCESS" in text or "Tree completed with SUCCESS" in text,
+        "failure": "Tree finished with status: FAILURE" in text or "Tree completed with FAILURE" in text,
+        "failed_to_load": "Failed to load" in text,
         "send_goal_timeout": "SEND_GOAL_TIMEOUT" in text,
         "server_unreachable": "SERVER_UNREACHABLE" in text or "not reachable" in text,
         "node_not_recognized": "Node not recognized" in text,
@@ -642,7 +650,6 @@ def run_single_case(case: Case, args: argparse.Namespace, artifact_dir: Path) ->
             bt_log = case_dir / "bt.log"
             logs["core"] = core_log
             logs["bt"] = bt_log
-            tree_path = f"/ros2_ws/install/peregrine_bt/share/peregrine_bt/trees/{case.tree}"
             procs.append(
                 start_process(
                     [
@@ -670,19 +677,32 @@ def run_single_case(case: Case, args: argparse.Namespace, artifact_dir: Path) ->
                         "bt_mission.launch.py",
                         "start_core_stack:=false",
                         "use_sim_time:=true",
-                        f"tree_file:={tree_path}",
                     ],
                     bt_log,
                     env=env,
                 )
             )
-            wait_for_node("/bt_executor", env)
-            configure_rc = lifecycle_set("/bt_executor", "configure", env)
-            if configure_rc != 0:
-                activate_rc = -1
-            else:
-                activate_rc = lifecycle_set("/bt_executor", "activate", env)
-            bt_lifecycle_ok = configure_rc == 0 and activate_rc == 0
+            wait_for_node("/bt_action_server", env, timeout_s=30.0)
+            goal_log = case_dir / "goal.log"
+            logs["goal"] = goal_log
+            procs.append(
+                start_process(
+                    [
+                        "ros2",
+                        "action",
+                        "send_goal",
+                        "/execute_tree",
+                        "btcpp_ros2_interfaces/action/ExecuteTree",
+                        f"{{target_tree: '{case.tree_id}', payload: ''}}",
+                        "--feedback",
+                    ],
+                    goal_log,
+                    env=env,
+                )
+            )
+            configure_rc = None
+            activate_rc = None
+            bt_lifecycle_ok = True
         elif case.kind == "launch":
             mission_log = case_dir / "mission.log"
             logs["mission"] = mission_log
@@ -871,6 +891,8 @@ def write_summary(results: list[dict[str, Any]], artifact_dir: Path) -> int:
 
 
 def container_main(args: argparse.Namespace) -> int:
+    os.environ["ROS_DOMAIN_ID"] = str(args.ros_domain_id)
+    os.environ["ROS_LOCALHOST_ONLY"] = str(args.ros_localhost_only)
     artifact_dir = Path(args.artifact_dir)
     artifact_dir.mkdir(parents=True, exist_ok=True)
     cases = selected_cases(args)
