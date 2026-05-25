@@ -82,9 +82,16 @@ def build_gcs_bridge_text(
 {topic_allowlist}
         ],
         service_servers: [],
-        service_clients: [],
+        service_clients: [
+          "/uav.*/arm",
+          "/uav.*/uav_manager/clear_emergency",
+        ],
         action_servers: [],
-        action_clients: [],
+        action_clients: [
+          "/uav.*/uav_manager/takeoff",
+          "/uav.*/uav_manager/land",
+          "/uav.*/execute_tree",
+        ],
       }},
     }},
   }},

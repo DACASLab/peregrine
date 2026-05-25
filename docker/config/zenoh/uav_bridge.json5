@@ -42,9 +42,16 @@
           "tf_static",
         ],
         subscribers: [],
-        service_servers: [],
+        service_servers: [
+          ".*/arm",
+          ".*/uav_manager/clear_emergency",
+        ],
         service_clients: [],
-        action_servers: [],
+        action_servers: [
+          ".*/uav_manager/takeoff",
+          ".*/uav_manager/land",
+          ".*/execute_tree",
+        ],
         action_clients: [],
       },
     },

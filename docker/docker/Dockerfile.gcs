@@ -112,6 +112,8 @@ RUN { \
 # ── BehaviorTree.CPP v4 (Phase 7: BT package scaffolding) ───────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-${ROS_DISTRO}-behaviortree-cpp \
+    ros-${ROS_DISTRO}-generate-parameter-library \
+    libncurses-dev \
     && rm -rf /var/lib/apt/lists/*
 
 USER ${CONTAINER_USER}
