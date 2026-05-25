@@ -29,6 +29,7 @@ services:
     environment:
       - DISPLAY=${DISPLAY:-:0}
       - DRONE_ID=${DRONE_ID:-1}
+      - RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION:-rmw_cyclonedds_cpp}
       - ROS_LOCALHOST_ONLY=${ROS_LOCALHOST_ONLY:-1}
       - ROS_WS=${ROS_WS:-/ros2_ws}
       - PX4_SIM_MODEL=${PX4_SIM_MODEL:-x500}

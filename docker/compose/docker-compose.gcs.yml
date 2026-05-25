@@ -28,6 +28,7 @@ services:
     environment:
       - DISPLAY=${DISPLAY:-:0}
       - DRONE_ID=99
+      - RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION:-rmw_cyclonedds_cpp}
       - ROS_LOCALHOST_ONLY=0
       - ROS_WS=${ROS_WS:-/ros2_ws}
       - ZENOH_BRIDGE_CONFIG=${ROS_WS:-/ros2_ws}/docker/config/zenoh/gcs_bridge.generated.json5

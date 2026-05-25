@@ -15,6 +15,7 @@ fi
 # ── Set ROS_DOMAIN_ID from DRONE_ID ───────────────────────────
 export ROS_DOMAIN_ID=${DRONE_ID:-0}
 export ROS_LOCALHOST_ONLY=${ROS_LOCALHOST_ONLY:-1}
+export RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION:-rmw_cyclonedds_cpp}
 
 # ── Enable multicast on loopback for DDS discovery ───────────
 # CycloneDDS needs multicast on lo when ROS_LOCALHOST_ONLY=1;

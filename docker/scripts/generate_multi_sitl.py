@@ -52,6 +52,7 @@ def build_uav_service(service_idx: int) -> str:
     environment:
       - DISPLAY=${{DISPLAY:-:0}}
       - DRONE_ID={drone_id}
+      - RMW_IMPLEMENTATION=${{RMW_IMPLEMENTATION:-rmw_cyclonedds_cpp}}
       - ROS_LOCALHOST_ONLY=1
       - ROS_WS=${{ROS_WS:-/ros2_ws}}
       - ZENOH_BRIDGE_CONFIG=${{ROS_WS:-/ros2_ws}}/docker/config/zenoh/uav_bridge.json5
@@ -96,6 +97,7 @@ services:
     container_name: ${{PROJECT_NAME:-ros2-px4-flight}}-multi-sim
     environment:
       - DISPLAY=${{DISPLAY:-:0}}
+      - RMW_IMPLEMENTATION=${{RMW_IMPLEMENTATION:-rmw_cyclonedds_cpp}}
       - ROS_LOCALHOST_ONLY=1
       - ROS_WS=${{ROS_WS:-/ros2_ws}}
       - PX4_GZ_WORLD=${{PX4_GZ_WORLD:-default}}
