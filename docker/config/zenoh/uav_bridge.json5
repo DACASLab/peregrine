@@ -2,14 +2,14 @@
   // ── Per-UAV Zenoh Bridge Config ──────────────────────────────────────────
   // Bridges local DDS topics to Zenoh.
   //
-  // Topic names are expected to already be UAV-scoped (for example /uav1/*)
+  // Topic names are expected to already be UAV-scoped (for example /uav2/*)
   // by the ROS node namespaces in each UAV container.
   //
   // NOTE: This is a TEMPLATE. The entrypoint.sh replaces __DRONE_ID__ and
   // __ZENOH_PORT__ at runtime, writing to /tmp/zenoh_bridge.json5.
   //
   // Usage (via entrypoint, not directly):
-  //   DRONE_ID=1 ZENOH_PORT=7447 zenoh-bridge-ros2dds -c /tmp/zenoh_bridge.json5
+  //   DRONE_ID=2 ZENOH_PORT=7447 zenoh-bridge-ros2dds -c /tmp/zenoh_bridge.json5
 
   mode: "peer",
 
@@ -21,36 +21,39 @@
     endpoints: [],
   },
 
+  scouting: {
+    multicast: { enabled: false },
+  },
+
   plugins: {
     ros2dds: {
       domain: __DRONE_ID__,
+      ros_localhost_only: true,
 
       allow: {
         publishers: [
-          ".*/uav_state",
-          ".*/estimated_state",
-          ".*/trajectory_setpoint",
-          ".*/safety_status",
-          ".*/estimation_status",
-          ".*/control_status",
-          ".*/trajectory_status",
-          ".*/status",
-          ".*/gps_status",
+          "/uav__DRONE_ID__/uav_state",
+          "/uav__DRONE_ID__/estimated_state",
+          "/uav__DRONE_ID__/trajectory_setpoint",
+          "/uav__DRONE_ID__/safety_status",
+          "/uav__DRONE_ID__/estimation_status",
+          "/uav__DRONE_ID__/control_status",
+          "/uav__DRONE_ID__/trajectory_status",
+          "/uav__DRONE_ID__/status",
+          "/uav__DRONE_ID__/gps_status",
           "/tf",
-          "tf",
           "/tf_static",
-          "tf_static",
         ],
         subscribers: [],
         service_servers: [
-          ".*/arm",
-          ".*/uav_manager/clear_emergency",
+          "/uav__DRONE_ID__/arm",
+          "/uav__DRONE_ID__/uav_manager/clear_emergency",
         ],
         service_clients: [],
         action_servers: [
-          ".*/uav_manager/takeoff",
-          ".*/uav_manager/land",
-          ".*/execute_tree",
+          "/uav__DRONE_ID__/uav_manager/takeoff",
+          "/uav__DRONE_ID__/uav_manager/land",
+          "/uav__DRONE_ID__/execute_tree",
         ],
         action_clients: [],
       },
