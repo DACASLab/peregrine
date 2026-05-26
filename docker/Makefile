@@ -47,7 +47,7 @@ multi-sitl-down:
 
 multi-dev:
 	xhost +local:docker 2>/dev/null || true
-	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_MULTI) run --rm sim bash
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_MULTI) run -it --rm sim bash
 
 generate-gcs:
 	python3 scripts/generate_gcs_config.py
@@ -81,13 +81,13 @@ rpi5:
 
 dev:
 	xhost +local:docker 2>/dev/null || true
-	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_SIM) run --rm sim bash
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_SIM) run -it --rm sim bash
 
 dev-jetson:
-	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_JETSON) run --rm aircraft bash
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_JETSON) run -it --rm aircraft bash
 
 dev-rpi5:
-	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_RPI5) run --rm aircraft bash
+	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_RPI5) run -it --rm aircraft bash
 
 # ── Shell into running container ─────────────────────────────────────────────
 

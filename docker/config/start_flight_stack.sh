@@ -2,7 +2,13 @@
 set -eo pipefail
 
 source /opt/ros/${ROS_DISTRO:-humble}/setup.bash
-[ -f install/setup.bash ] && source install/setup.bash || true
+
+if [ ! -f install/setup.bash ]; then
+  echo "[start_flight_stack] Workspace not built. Run 'make dev-jetson' and 'colcon build' first."
+  exit 0
+fi
+
+source install/setup.bash
 
 ros2 launch peregrine_bringup core_stack.launch.py \
   start_microxrce_agent:=false \
