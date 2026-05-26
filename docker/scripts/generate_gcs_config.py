@@ -99,11 +99,11 @@ def build_gcs_bridge_text(
 """
 
 
-def build_tmux_text(num_uavs: int) -> str:
+def build_tmux_text(drone_ids: List[int]) -> str:
     pane_lines = "\n".join(
         [
-            f"        - uav{i + 1}_tui: ros2 run tui_status tui_status_node --ros-args -p uav_namespace:=/uav{i + 1}"
-            for i in range(num_uavs)
+            f"        - uav{did}_tui: ros2 run tui_status tui_status_node --ros-args -p uav_namespace:=/uav{did}"
+            for did in drone_ids
         ]
     )
 
@@ -125,17 +125,17 @@ windows:
 {pane_lines}
   - rviz:
       panes:
-        - rviz_multi: ros2 launch rviz_plugins multi_flight_visualization.launch.py num_uavs:={num_uavs} uav_namespace_prefix:=uav rviz_config:=${{ROS_WS:-/ros2_ws}}/docker/config/rviz/flight_visualization.generated.rviz
+        - rviz_multi: ros2 launch rviz_plugins multi_flight_visualization.launch.py num_uavs:={len(drone_ids)} uav_namespace_prefix:=uav drone_ids:={','.join(str(d) for d in drone_ids)} rviz_config:=${{ROS_WS:-/ros2_ws}}/docker/config/rviz/flight_visualization.generated.rviz
   - topics:
       panes:
         - ros2 topic list
 """
 
 
-def build_generated_rviz_text(num_uavs: int, template_text: str) -> str:
+def build_generated_rviz_text(drone_ids: List[int], template_text: str) -> str:
     frame_entries = ["        base_link_frd:\n          Value: false"]
     frame_entries.extend(
-        [f"        uav{i}/base_link_frd:\n          Value: false" for i in range(1, num_uavs + 1)]
+        [f"        uav{did}/base_link_frd:\n          Value: false" for did in drone_ids]
     )
     frames_block = "      Frames:\n        All Enabled: true\n" + "\n".join(frame_entries) + "\n"
 
@@ -176,6 +176,12 @@ def parse_args() -> argparse.Namespace:
         help="GCS Zenoh listen port (default: from GCS_ZENOH_PORT in .env, or 7459).",
     )
     parser.add_argument(
+        "--drone-ids",
+        type=str,
+        default=None,
+        help="Comma-separated DRONE_IDs (e.g. 2,4). Defaults to 1..N for sim.",
+    )
+    parser.add_argument(
         "--env-file",
         type=Path,
         default=None,
@@ -213,6 +219,12 @@ def main() -> int:
         uav_ips = [ip.strip() for ip in ip_str.split(",") if ip.strip()]
         num_uavs = len(uav_ips)
 
+    drone_id_str = args.drone_ids or env_values.get("GCS_DRONE_IDS", "")
+    if drone_id_str:
+        drone_ids = [int(d.strip()) for d in drone_id_str.split(",") if d.strip()]
+    else:
+        drone_ids = list(range(1, num_uavs + 1))
+
     gcs_bridge_path = docker_dir / "config" / "zenoh" / "gcs_bridge.generated.json5"
     tmux_path = docker_dir / "config" / "tmuxinator" / "gcs.generated.yml"
     rviz_template_path = (
@@ -231,12 +243,12 @@ def main() -> int:
     )
 
     tmux_path.parent.mkdir(parents=True, exist_ok=True)
-    tmux_path.write_text(build_tmux_text(num_uavs), encoding="utf-8")
+    tmux_path.write_text(build_tmux_text(drone_ids), encoding="utf-8")
 
     generated_rviz_path.parent.mkdir(parents=True, exist_ok=True)
     if rviz_template_path.exists():
         generated_rviz_path.write_text(
-            build_generated_rviz_text(num_uavs, rviz_template_path.read_text(encoding="utf-8")),
+            build_generated_rviz_text(drone_ids, rviz_template_path.read_text(encoding="utf-8")),
             encoding="utf-8",
         )
         print(f" - {generated_rviz_path}")

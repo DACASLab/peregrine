@@ -33,12 +33,23 @@ services:
       - ROS_WS=${ROS_WS:-/ros2_ws}
       - ZENOH_BRIDGE_CONFIG=${ROS_WS:-/ros2_ws}/docker/config/zenoh/gcs_bridge.generated.json5
       - ZENOH_PORT=${GCS_ZENOH_PORT:-7459}
+      - GCS_MODE=${GCS_MODE:-sim}
+      - GCS_UAV_IPS=${GCS_UAV_IPS:-}
+      - GCS_NUM_UAVS=${GCS_NUM_UAVS:-}
+      - GCS_DRONE_IDS=${GCS_DRONE_IDS:-}
     volumes:
       - ../../:${ROS_WS:-/ros2_ws}:rw
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ${HOME}/.Xauthority:/home/${CONTAINER_USER:-peregrine}/.Xauthority:ro
     command: >
       bash -lc "
+        python3 $${ROS_WS:-/ros2_ws}/docker/scripts/generate_gcs_config.py
+          --env-file $${ROS_WS:-/ros2_ws}/docker/.env
+          --mode $${GCS_MODE:-sim}
+          --zenoh-port $${ZENOH_PORT:-7459}
+          $${GCS_UAV_IPS:+--uav-ips $$GCS_UAV_IPS}
+          $${GCS_NUM_UAVS:+--num-uavs $$GCS_NUM_UAVS}
+          $${GCS_DRONE_IDS:+--drone-ids $$GCS_DRONE_IDS} &&
         source /opt/ros/$${ROS_DISTRO:-humble}/setup.bash &&
         [ -f $${ROS_WS:-/ros2_ws}/install/setup.bash ] && source $${ROS_WS:-/ros2_ws}/install/setup.bash;
         export ROS_DOMAIN_ID=99;

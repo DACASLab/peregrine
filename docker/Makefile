@@ -52,7 +52,7 @@ multi-dev:
 generate-gcs:
 	python3 scripts/generate_gcs_config.py
 
-gcs: generate-gcs
+gcs:
 	xhost +local:docker 2>/dev/null || true
 	docker compose $(COMPOSE_ENV_FILES) $(COMPOSE_GCS) up
 
