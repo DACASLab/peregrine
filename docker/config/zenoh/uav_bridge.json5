@@ -41,6 +41,7 @@
           "/uav__DRONE_ID__/trajectory_status",
           "/uav__DRONE_ID__/status",
           "/uav__DRONE_ID__/gps_status",
+          "/uav__DRONE_ID__/compute_status",
           "/tf",
           "/tf_static",
         ],

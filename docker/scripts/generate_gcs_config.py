@@ -54,6 +54,7 @@ def build_gcs_bridge_text(
           "/uav.*/trajectory_status",
           "/uav.*/status",
           "/uav.*/gps_status",
+          "/uav.*/compute_status",
           "/tf",
           "/tf_static","""
 
