@@ -10,7 +10,7 @@ fi
 
 source install/setup.bash
 
-ros2 launch peregrine_bringup core_stack.launch.py \
+ros2 launch peregrine_bringup bt_mission.launch.py \
   start_microxrce_agent:=false \
   ros_domain_id:=${DRONE_ID:-1} \
   ros_localhost_only:=${ROS_LOCALHOST_ONLY:-1} \
