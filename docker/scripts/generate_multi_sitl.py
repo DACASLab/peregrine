@@ -37,6 +37,9 @@ def build_uav_service(service_idx: int) -> str:
     drone_id = i + 1
     ros_domain_id = drone_id
     zenoh_port = 7447 + i
+    # Groot2Publisher binds the requested port and the next port, so leave
+    # a two-port stride between UAVs when all containers share host networking.
+    groot2_port = 1667 + 2 * i
     microxrce_port = 8888 + 2 * i
     px4_namespace = "" if i == 0 else f"/px4_{i}"
     target_system_id = drone_id
@@ -67,7 +70,7 @@ def build_uav_service(service_idx: int) -> str:
         sleep 2 &&
         source /opt/ros/${{ROS_DISTRO:-humble}}/setup.bash &&
         [ -f ${{ROS_WS:-/ros2_ws}}/install/setup.bash ] && source ${{ROS_WS:-/ros2_ws}}/install/setup.bash;
-        ros2 launch peregrine_bringup core_stack.launch.py start_microxrce_agent:=false ros_domain_id:={ros_domain_id} microxrce_port:={microxrce_port} uav_namespace:={uav_namespace}{px4_ns_arg} target_system_id:={target_system_id} use_sim_time:=true
+        ros2 launch peregrine_bringup bt_mission.launch.py start_core_stack:=true start_microxrce_agent:=false ros_domain_id:={ros_domain_id} microxrce_port:={microxrce_port} uav_namespace:={uav_namespace}{px4_ns_arg} target_system_id:={target_system_id} use_sim_time:=true groot2_port:={groot2_port}
       "
 """
 

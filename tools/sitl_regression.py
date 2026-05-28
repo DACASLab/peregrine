@@ -82,6 +82,15 @@ CASES: dict[str, Case] = {
         timeout_s=220,
         expect=Expectation(require_bt_success=True),
     ),
+    "bt/single_uav_surveillance": Case(
+        name="bt/single_uav_surveillance",
+        suite="bt",
+        kind="bt",
+        tree="single_uav_surveillance.xml",
+        tree_id="SingleUavSurveillance",
+        timeout_s=420,
+        expect=Expectation(require_bt_success=True),
+    ),
     "python/circle_figure8": Case(
         name="python/circle_figure8",
         suite="python-client",
@@ -400,7 +409,7 @@ def lifecycle_set(node_name: str, transition: str, env: dict[str, str], timeout_
     return proc.returncode
 
 
-def monitor_topics(duration_s: float, namespace: str = "") -> dict[str, Any]:
+def monitor_topics(duration_s: float, namespace: str = "", px4_namespace: str = "") -> dict[str, Any]:
     import rclpy
     from peregrine_interfaces.msg import GpsStatus, PX4Status, SafetyStatus, State, UAVState
     from rclpy.executors import SingleThreadedExecutor
@@ -409,6 +418,10 @@ def monitor_topics(duration_s: float, namespace: str = "") -> dict[str, Any]:
 
     def topic(name: str) -> str:
         ns = namespace.strip("/")
+        return f"/{ns}/{name.lstrip('/')}" if ns else f"/{name.lstrip('/')}"
+
+    def px4_topic(name: str) -> str:
+        ns = px4_namespace.strip("/")
         return f"/{ns}/{name.lstrip('/')}" if ns else f"/{name.lstrip('/')}"
 
     ctx = rclpy.Context()
@@ -526,8 +539,9 @@ def monitor_topics(duration_s: float, namespace: str = "") -> dict[str, Any]:
         }
 
     node.create_subscription(State, topic("state"), state_cb, 10)
+    node.create_subscription(State, topic("estimated_state"), state_cb, 10)
     node.create_subscription(UAVState, topic("uav_state"), uav_cb, 10)
-    node.create_subscription(VehicleStatus, topic("fmu/out/vehicle_status_v1"), vehicle_status_cb, sensor_qos)
+    node.create_subscription(VehicleStatus, px4_topic("fmu/out/vehicle_status_v1"), vehicle_status_cb, sensor_qos)
     node.create_subscription(SafetyStatus, topic("safety_status"), safety_cb, 10)
     node.create_subscription(PX4Status, topic("status"), px4_cb, 10)
     node.create_subscription(GpsStatus, topic("gps_status"), gps_cb, 10)
@@ -570,8 +584,16 @@ def evaluate(
 
     if expect.require_tree_load and "bt" in logs:
         bt_text = read_log(logs["bt"])
-        if "Failed to load" in bt_text or "Node not recognized" in bt_text:
-            failures.append("BT tree failed to load")
+        loaded_marker = f"Loaded BehaviorTree: {case.tree}" if case.tree else ""
+        created_marker = f"Tree '{case.tree_id}' created" if case.tree_id else ""
+        requested_tree_loaded = bool(
+            (loaded_marker and loaded_marker in bt_text) or
+            (created_marker and created_marker in bt_text)
+        )
+        if not requested_tree_loaded:
+            failures.append(f"BT tree {case.tree or case.tree_id} did not load")
+        if "Node not recognized" in bt_text:
+            failures.append("BT node type not recognized")
     if expect.require_bt_success:
         bt_text = read_log(logs["bt"]) if "bt" in logs else ""
         goal_text = read_log(logs["goal"]) if "goal" in logs else ""
@@ -752,7 +774,13 @@ def run_single_case(case: Case, args: argparse.Namespace, artifact_dir: Path) ->
             cleanup_container_processes()
 
 
-def monitor_domain_subprocess(domain: int, namespace: str, duration_s: int, out_path: Path) -> subprocess.Popen[str]:
+def monitor_domain_subprocess(
+    domain: int,
+    namespace: str,
+    duration_s: int,
+    out_path: Path,
+    px4_namespace: str = "",
+) -> subprocess.Popen[str]:
     env = os.environ.copy()
     env["ROS_DOMAIN_ID"] = str(domain)
     env["ROS_LOCALHOST_ONLY"] = "1"
@@ -765,6 +793,8 @@ def monitor_domain_subprocess(domain: int, namespace: str, duration_s: int, out_
             str(duration_s),
             "--namespace",
             namespace,
+            "--px4-namespace",
+            px4_namespace,
             "--output",
             str(out_path),
         ],
@@ -797,8 +827,16 @@ def run_multi_case(case: Case, args: argparse.Namespace, artifact_dir: Path) -> 
     for i in range(args.num_uavs):
         domain = i + 1
         namespace = f"/uav{domain}"
+        px4_namespace = "" if i == 0 else f"/px4_{i}"
         out = case_dir / f"monitor_uav{domain}.json"
-        monitors.append((domain, namespace, out, monitor_domain_subprocess(domain, namespace, case.timeout_s, out)))
+        monitors.append(
+            (
+                domain,
+                namespace,
+                out,
+                monitor_domain_subprocess(domain, namespace, case.timeout_s, out, px4_namespace),
+            )
+        )
 
     proc = start_process(launch_args, mission_log, env=env)
     try:
@@ -889,7 +927,7 @@ def container_main(args: argparse.Namespace) -> int:
 
 
 def monitor_only_main(args: argparse.Namespace) -> int:
-    observation = monitor_topics(args.duration_s, args.namespace)
+    observation = monitor_topics(args.duration_s, args.namespace, args.px4_namespace)
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(observation, indent=2, sort_keys=True), encoding="utf-8")
@@ -912,6 +950,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--monitor-only", action="store_true")
     parser.add_argument("--duration-s", type=int, default=60)
     parser.add_argument("--namespace", default="")
+    parser.add_argument("--px4-namespace", default="")
     parser.add_argument("--output", default="/tmp/sitl_monitor.json")
     parser.add_argument("--list", action="store_true", help="List available cases.")
     return parser.parse_args(argv)
