@@ -4,8 +4,8 @@
 	branch = release/1.16
 [submodule "src/peregrine_core"]
 	path = src/peregrine_core
-	url = https://github.com/varadVaidya/peregrine_core.git
+	url = https://github.com/DACASLab/peregrine_core.git
 	branch = main
 [submodule "src/behaviortree_ros2"]
 	path = src/behaviortree_ros2
-	url = https://github.com/BehaviorTree/BehaviorTree.ROS2.git
+	url = https://github.com/DACASLab/BehaviorTree.ROS2.git
