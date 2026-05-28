@@ -91,6 +91,15 @@ CASES: dict[str, Case] = {
         timeout_s=420,
         expect=Expectation(require_bt_success=True),
     ),
+    "bt/test_fallback_land": Case(
+        name="bt/test_fallback_land",
+        suite="bt",
+        kind="bt",
+        tree="test_fallback_land.xml",
+        tree_id="TestFallbackLand",
+        timeout_s=300,
+        expect=Expectation(require_bt_success=True),
+    ),
     "python/circle_figure8": Case(
         name="python/circle_figure8",
         suite="python-client",
