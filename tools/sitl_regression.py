@@ -35,6 +35,10 @@ DEFAULT_ROS_DOMAIN_ID = 42
 DEFAULT_ROS_LOCALHOST_ONLY = 1
 DEFAULT_NUM_UAVS = 3
 
+SITL_HOME_LAT = "13.018526"
+SITL_HOME_LON = "77.565041"
+PX4_DEFAULT_WORLD = "/opt/PX4-Autopilot/Tools/simulation/gz/worlds/default.sdf"
+
 
 @dataclass(frozen=True)
 class Expectation:
@@ -398,6 +402,25 @@ def base_env(ros_domain_id: int, ros_localhost_only: int) -> dict[str, str]:
     return env
 
 
+def patch_gz_world_home(world_path: str = PX4_DEFAULT_WORLD) -> None:
+    path = Path(world_path)
+    if not path.exists():
+        return
+    text = path.read_text(encoding="utf-8")
+    text = re.sub(
+        r"<latitude_deg>[^<]+</latitude_deg>",
+        f"<latitude_deg>{SITL_HOME_LAT}</latitude_deg>",
+        text,
+    )
+    text = re.sub(
+        r"<longitude_deg>[^<]+</longitude_deg>",
+        f"<longitude_deg>{SITL_HOME_LON}</longitude_deg>",
+        text,
+    )
+    path.write_text(text, encoding="utf-8")
+    print(f"Patched {world_path} → lat={SITL_HOME_LAT}, lon={SITL_HOME_LON}", flush=True)
+
+
 def wait_for_node(node_name: str, env: dict[str, str], timeout_s: float = 15.0) -> bool:
     deadline = time.monotonic() + timeout_s
     while time.monotonic() < deadline:
@@ -647,6 +670,7 @@ def run_single_case(case: Case, args: argparse.Namespace, artifact_dir: Path) ->
     mission_rc: int | None = None
 
     cleanup_container_processes()
+    patch_gz_world_home()
     try:
         px4_log = case_dir / "px4.log"
         logs["px4"] = px4_log
