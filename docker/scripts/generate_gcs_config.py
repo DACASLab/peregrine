@@ -124,6 +124,9 @@ windows:
       layout: tiled
       panes:
 {pane_lines}
+  - commands:
+      panes:
+        - mission_shell: echo "Ready. Usage -- python3 -m peregrine_client.missions.trigger_trajectory [--uavs uav1,uav2] [--tree MultiTrajectory]"
   - rviz:
       panes:
         - rviz_multi: ros2 launch rviz_plugins multi_flight_visualization.launch.py num_uavs:={len(drone_ids)} uav_namespace_prefix:=uav drone_ids:={','.join(str(d) for d in drone_ids)} rviz_config:=${{ROS_WS:-/ros2_ws}}/docker/config/rviz/flight_visualization.generated.rviz
