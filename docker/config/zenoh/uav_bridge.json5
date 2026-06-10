@@ -21,8 +21,12 @@
     endpoints: [],
   },
 
+  // Peer-to-peer discovery so UAVs see each other's /fleet/agent_state DIRECTLY
+  // (decentralized BVC must not depend on the GCS relaying). Multicast works in
+  // sim (host networking + loopback multicast) and on a shared field LAN. For
+  // segmented hardware networks, list peer bridge endpoints in `connect` instead.
   scouting: {
-    multicast: { enabled: false },
+    multicast: { enabled: true },
   },
 
   plugins: {
@@ -42,10 +46,18 @@
           "/uav__DRONE_ID__/status",
           "/uav__DRONE_ID__/gps_status",
           "/uav__DRONE_ID__/compute_status",
+          // Inter-UAV collision avoidance: shared fleet bus. Every UAV publishes
+          // its own FleetAgentState (uav_id is inside the message) to the SAME
+          // global topic; Zenoh merges all peers' publications.
+          "/fleet/agent_state",
           "/tf",
           "/tf_static",
         ],
-        subscribers: [],
+        // Receive every peer's FleetAgentState on the same global topic. The local
+        // multi_agent_coordinator filters out its own uav_id.
+        subscribers: [
+          "/fleet/agent_state",
+        ],
         service_servers: [
           "/uav__DRONE_ID__/arm",
           "/uav__DRONE_ID__/uav_manager/clear_emergency",
