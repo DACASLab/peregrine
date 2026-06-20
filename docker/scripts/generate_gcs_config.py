@@ -78,6 +78,17 @@ def build_gcs_bridge_text(
     ros2dds: {{
       domain: 99,
 
+      // Long-running BT missions (e.g. the surveillance sweep ~6 min) keep the
+      // ExecuteTree action's get_result query pending past the 300s plugin
+      // default, which made the GCS client report FAILED even though the
+      // mission flew + landed. Raise the action result timeout above the
+      // longest mission (must match the UAV bridge; see uav_bridge.json5).
+      queries_timeout: {{
+        actions: {{
+          get_result: 3600.0,
+        }},
+      }},
+
       allow: {{
         publishers: [],
         subscribers: [

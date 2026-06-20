@@ -34,6 +34,17 @@
       domain: __DRONE_ID__,
       ros_localhost_only: true,
 
+      // Long-running BT missions (e.g. the surveillance sweep ~6 min) keep the
+      // ExecuteTree action's get_result query pending well past the 300s plugin
+      // default, which made the bridge reply Timeout and the GCS client report
+      // FAILED even though the mission flew + landed successfully. Raise the
+      // action result timeout to comfortably exceed the longest mission.
+      queries_timeout: {
+        actions: {
+          get_result: 3600.0,
+        },
+      },
+
       allow: {
         publishers: [
           "/uav__DRONE_ID__/uav_state",
