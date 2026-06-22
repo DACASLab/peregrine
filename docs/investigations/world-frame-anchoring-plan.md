@@ -139,7 +139,17 @@ world ──(1)──► map ──(2)──► odom ──(3)──► base_lin
 | # | Edge | Source (PX4 `vehicle_local_position` unless noted) | Updates |
 |---|------|-----------------------------------------------------|---------|
 | 1 | `world→map` | `geodeticToEnu(world_datum, ref_lat, ref_lon, ref_alt)`, gated `xy_global && z_global`; vertical from the ground datum when GPS-denied (§5.4) | **set once at first valid `ref_*`; NOT refreshed on later `ref_timestamp`** (see double-count note) |
-| 2 | `map→odom` | accumulated **negative** reset offset: `−Σ nedToEnu(delta_xy, delta_z)`, `−Σ delta_heading` (the **inverse** of the PX4 estimate jump) | **steps only on a `*_reset_counter` change**; else constant |
+| 2 | `map→odom` | accumulated **negative** **position** reset offset: `−Σ nedToEnu(delta_xy, delta_z)` (the **inverse** of the PX4 estimate jump). **NO yaw** — see heading note. | **steps only on an `xy/z_reset_counter` change**; else constant |
+
+> **CORRECTION (heading is NOT compensated).** Earlier drafts accumulated `−Σ delta_heading`
+> into a `map_to_odom_yaw`. That is **wrong** and was removed. `world` and `odom` are both
+> north-aligned ENU, so the transform between them is a **pure translation** — there is no yaw.
+> A heading reset is an EKF **correction of the orientation estimate** (expressed identically in
+> both frames), not a frame-origin change, so the corrected orientation must **pass through**
+> unchanged. Compensating it makes the published world heading wrong by the accumulated amount,
+> which corrupts any velocity rotated by it (it broke inter-UAV BVC in SITL — the coordinator
+> rotates body velocity by this orientation). `map_to_odom_yaw` is kept in `FrameAnchor` for
+> message stability but is always 0.
 
 **Sign (TF map→odom).** For parent `map`, child `odom`: `p_map = t_map_odom + p_odom`. If raw
 PX4 pose jumps `p_odom_new = p_odom_old + delta` while the vehicle is physically still, then
@@ -227,7 +237,7 @@ IDs are global strings in one tree — they **must** be unique per UAV, and the 
 ```
 std_msgs/Header header
 geometry_msgs/Vector3 map_to_odom_enu   # −Σ nedToEnu(delta_xy, delta_z); INVERSE of PX4 jump; steps on reset
-float64 map_to_odom_yaw                  # −Σ delta_heading (ENU); inverse of PX4 jump
+float64 map_to_odom_yaw                  # always 0 (heading is NOT compensated; see §5.2 correction)
 float64 ref_lat
 float64 ref_lon
 float64 ref_alt                          # AMSL
@@ -259,7 +269,8 @@ its already-tested velocity-frame handling and NED→ENU conversion) drives `odo
 `delta_*` is last-reset-only, not cumulative):
   - `xy_reset_counter` ↑ → `map_to_odom_enu.xy −= nedToEnu(delta_xy)`
   - `z_reset_counter` ↑ → `map_to_odom_enu.z −= nedToEnu(delta_z)`
-  - `heading_reset_counter` ↑ → `map_to_odom_yaw = wrap_pi(map_to_odom_yaw − delta_heading_enu)`
+  - `heading_reset_counter` ↑ → **track the counter only; do NOT accumulate yaw** (heading is
+    an estimate correction, not a frame change — §5.2 correction). Orientation passes through.
   - this offset absorbs **all** deltas (incl. origin moves); `world→map` is therefore the
     one-time anchor and must NOT also react to `ref_*` (§5.2 double-count note).
   - re-baseline if a counter jumps backward (EKF reinit). Do **not** re-baseline merely because
