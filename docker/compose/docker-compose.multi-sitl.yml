@@ -50,6 +50,8 @@ services:
       - ROS_WS=${ROS_WS:-/ros2_ws}
       - ZENOH_BRIDGE_CONFIG=${ROS_WS:-/ros2_ws}/docker/config/zenoh/uav_bridge.json5
       - ZENOH_PORT=7447
+      # Persist node + bridge logs per-UAV on the bind-mounted workspace for post-analysis.
+      - ROS_LOG_DIR=${ROS_WS:-/ros2_ws}/logs/uav1
     depends_on:
       sim:
         condition: service_started
@@ -74,6 +76,8 @@ services:
       - ROS_WS=${ROS_WS:-/ros2_ws}
       - ZENOH_BRIDGE_CONFIG=${ROS_WS:-/ros2_ws}/docker/config/zenoh/uav_bridge.json5
       - ZENOH_PORT=7448
+      # Persist node + bridge logs per-UAV on the bind-mounted workspace for post-analysis.
+      - ROS_LOG_DIR=${ROS_WS:-/ros2_ws}/logs/uav2
     depends_on:
       sim:
         condition: service_started
