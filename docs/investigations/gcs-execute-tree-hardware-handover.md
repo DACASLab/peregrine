@@ -33,7 +33,80 @@ So TUI working proves the UAV manager path is reachable, but it does not prove t
 
 ## Refined Diagnosis From Hardware Trace
 
-After tracing the failure end to end, the strongest diagnosis is that the `execute_tree` action server is not being discovered because `peregrine_tree_server` is not running on UAV4, or it starts and exits/crashes before it remains discoverable.
+## 2026-06-23 Follow-Up Finding
+
+Live checks on UAV4 (`falinks@192.168.0.203`) showed the current startup and bridge
+configuration are correct after a restart:
+
+- `peregrine_tree_server` is running as `/uav4/bt_action_server`.
+- `/uav4/execute_tree [btcpp_ros2_interfaces/action/ExecuteTree]` exists locally on
+  the aircraft.
+- `/tmp/zenoh_bridge.json5` exports `/uav4/execute_tree`.
+- The GCS bridge imports `/uav.*/execute_tree` and currently discovers
+  `/uav4/execute_tree`.
+
+The failure observed in the logs is a server crash after two goal callbacks reached
+the action server about 1 ms apart:
+
+```text
+[peregrine_tree_server-2] [INFO] ... Received goal request to execute Behavior Tree: MultiTrajectory
+[peregrine_tree_server-2] [INFO] ... Received goal request to execute Behavior Tree: MultiTrajectory
+[peregrine_tree_server-2] terminate called after throwing an instance of 'std::runtime_error'
+[peregrine_tree_server-2]   what():  Failed to accept new goal
+[ERROR] [peregrine_tree_server-2]: process has died ...
+```
+
+This does not prove that an operator sent two commands. The aircraft bridge reported
+the requesting side as Zenoh bridge `19633adbf8e489a23fa855b0252dfcaf`; current
+Docker logs for `ros2-px4-flight-gcs` do not contain that bridge ID, so the exact
+origin is not recoverable from the retained logs. Plausible sources are a duplicated
+Zenoh action request, a second/old GCS bridge, or another client process on the same
+network. A follow-up source change logs the ROS action goal UUID so the next test can
+separate same-UUID transport duplication from two distinct client goals.
+
+Upstream context: this failure string comes from the ROS 2 action stack, not from
+mission logic. ROS 2 actions use a goal UUID and action servers are expected to
+handle simultaneous/racing goal requests; upstream `rclcpp` issue 3120 documents
+a related crash where a duplicate goal UUID throws `std::runtime_error("Failed to
+accept new goal")` instead of being rejected cleanly. This trace is therefore
+consistent with a known ROS action-server failure mode, even if the exact
+BehaviorTree.ROS2 `TreeExecutionServer` overlap path has not been confirmed as
+the same upstream issue.
+
+Once `peregrine_tree_server` dies, Zenoh undeclares `/uav4/execute_tree`; later GCS
+commands then fail at `wait_for_server()` or hang on bridge requests with messages like:
+
+```text
+Route Service Client (ROS:/uav4/execute_tree/_action/send_goal -> ...):
+received NO reply for request ... - cannot reply to client, it will hang until timeout
+```
+
+This is not explained by NTP skew in the checked state: the GCS host, GCS container,
+UAV4 host, and UAV4 container clocks agreed within about one second, and both hosts
+reported NTP synchronized. The `NO reply` bridge warning is consistent with the BT
+server already being gone or unavailable to answer the action request.
+
+Implemented local source fix:
+
+- `src/behaviortree_ros2/behaviortree_ros2/src/tree_execution_server.cpp` now rejects
+  overlapping `ExecuteTree` goals while one tree is active instead of allowing a second
+  goal path to throw `Failed to accept new goal` and abort the process.
+- The same source now logs the action goal UUID for each received/rejected goal.
+- Verified with:
+
+```bash
+docker exec ros2-px4-flight-gcs bash -lc \
+  'cd /ros2_ws && source /opt/ros/${ROS_DISTRO:-humble}/setup.bash && \
+   colcon build --packages-select behaviortree_ros2 peregrine_bt \
+   --cmake-args -DCMAKE_BUILD_TYPE=RelWithDebInfo'
+```
+
+Deploy/rebuild this patch on the aircraft before relying on repeated GCS mission
+triggers. Do not restart the aircraft service while the vehicle is armed or flying.
+
+Earlier tracing correctly narrowed the first split to whether `peregrine_tree_server`
+is discoverable on UAV4. If `/uav4/execute_tree` is missing, it is either not
+running or it started and exited/crashed before it remained discoverable.
 
 The bridge is lower probability once these are true:
 
