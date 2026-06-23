@@ -31,6 +31,40 @@ Surveillance uses:
 
 So TUI working proves the UAV manager path is reachable, but it does not prove the behavior-tree action server exists or is bridged.
 
+## Refined Diagnosis From Hardware Trace
+
+After tracing the failure end to end, the strongest diagnosis is that the `execute_tree` action server is not being discovered because `peregrine_tree_server` is not running on UAV4, or it starts and exits/crashes before it remains discoverable.
+
+The bridge is lower probability once these are true:
+
+- GCS TUI arm/takeoff/land work from the same GCS tmux session.
+- The rendered UAV and GCS Zenoh configs include the current action allowlists.
+- The GCS container was restarted after config generation.
+
+Those working commands prove the GCS can route actions to UAV4 through Zenoh. They do not prove `execute_tree`, because it is served by a different process:
+
+| Command | Served by | Launched by |
+|---|---|---|
+| `/uav4/arm` | `uav_manager` | `core_stack.launch.py` |
+| `/uav4/uav_manager/takeoff` | `uav_manager` | `core_stack.launch.py` |
+| `/uav4/uav_manager/land` | `uav_manager` | `core_stack.launch.py` |
+| `/uav4/execute_tree` | `peregrine_tree_server` / `bt_action_server` | `bt_mission.launch.py` |
+
+So the most likely real split is:
+
+- `core_stack.launch.py` is up, so TUI commands work.
+- The BT server from `bt_mission.launch.py` is absent, crashed, or was never launched, so surveillance cannot start.
+
+Common reasons:
+
+- The aircraft was launched with only the core stack instead of `docker/config/start_flight_stack.sh` / `bt_mission.launch.py`.
+- `peregrine_bt` or `btcpp_ros2_interfaces` is not built/installed in the UAV4 container overlay.
+- `peregrine_tree_server` fails while loading/registering BT nodes or XML files from `peregrine_bt/trees`.
+- A tree XML parse error kills the BT server during startup registration.
+- A `groot2_port` conflict is possible, but from source it is normally hit when a tree goal is accepted and `BT::Groot2Publisher` is created, not during the initial `wait_for_server()` phase. Treat it as a log-check item, not the first explanation for "action server not available".
+
+Source note: `behaviortree_ros2::TreeExecutionServer` creates the ROS action server in its constructor, then runs behavior-tree registration shortly after via a timer. If registration throws and the process exits, the client will still see `wait_for_server()` fail because the server disappeared before discovery completed.
+
 ## Most Likely Causes
 
 Check in this order.
