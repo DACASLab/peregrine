@@ -55,6 +55,9 @@ def build_gcs_bridge_text(
           "/uav.*/status",
           "/uav.*/gps_status",
           "/uav.*/compute_status",
+          "/uav.*/viz/coverage_grid",
+          "/uav.*/viz/planned_path",
+          "/uav.*/viz/coverage_swath",
           "/fleet/agent_state",
           "/tf",
           "/tf_static","""
@@ -148,26 +151,160 @@ windows:
 """
 
 
-def build_generated_rviz_text(drone_ids: List[int], template_text: str) -> str:
-    frame_entries = ["        base_link_frd:\n          Value: false"]
-    frame_entries.extend(
+# ── Per-UAV color: must match the C++ Turbo colormap so RViz Path colors equal the
+# marker colors emitted by trajectory_manager / flight_visualizer. Mirror of
+# frame_transforms/viz_colormap.hpp (turbo + golden-ratio index spread). N-agnostic.
+_GOLDEN_RATIO_CONJUGATE = 0.618033988749894848
+
+
+def _turbo(x: float) -> tuple[float, float, float]:
+    x = max(0.0, min(1.0, x))
+    x2 = x * x
+    x3 = x2 * x
+    x4 = x2 * x2
+    x5 = x4 * x
+    r = 0.13572138 + 4.61539260 * x - 42.66032258 * x2 + 132.13108234 * x3 - 152.94239396 * x4 + 59.28637943 * x5
+    g = 0.09140261 + 2.19418839 * x + 4.84296658 * x2 - 14.18503333 * x3 + 4.27729857 * x4 + 2.82956604 * x5
+    b = 0.10667330 + 12.64194608 * x - 60.58204836 * x2 + 110.36276771 * x3 - 89.90310912 * x4 + 27.34824973 * x5
+    return (max(0.0, min(1.0, r)), max(0.0, min(1.0, g)), max(0.0, min(1.0, b)))
+
+
+def _uav_rgb255(uav_id: int) -> tuple[int, int, int]:
+    frac = (uav_id * _GOLDEN_RATIO_CONJUGATE) % 1.0
+    r, g, b = _turbo(frac)
+    return (round(r * 255), round(g * 255), round(b * 255))
+
+
+def _grid_display() -> str:
+    return """    - Alpha: 0.35
+      Cell Size: 1
+      Class: rviz_default_plugins/Grid
+      Color: 180; 180; 185
+      Enabled: true
+      Line Style:
+        Line Width: 0.03
+        Value: Lines
+      Name: Grid
+      Plane: XY
+      Plane Cell Count: 30
+      Reference Frame: <Fixed Frame>
+      Value: true
+"""
+
+
+def _tf_display(drone_ids: List[int]) -> str:
+    entries = ["        base_link_frd:\n          Value: false"]
+    entries.extend(
         [f"        uav{did}/base_link_frd:\n          Value: false" for did in drone_ids]
     )
-    frames_block = "      Frames:\n        All Enabled: true\n" + "\n".join(frame_entries) + "\n"
+    frames = "        All Enabled: true\n" + "\n".join(entries)
+    return f"""    - Class: rviz_default_plugins/TF
+      Enabled: true
+      Frame Timeout: 15
+      Frames:
+{frames}
+      Marker Scale: 5
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+      Tree:
+        {{}}
+      Update Interval: 0
+      Value: true
+"""
 
-    marker_scale_token = "      Marker Scale:"
-    marker_idx = template_text.find(marker_scale_token)
-    if marker_idx == -1:
-        raise ValueError("Could not find 'Marker Scale:' in RViz template.")
 
-    frames_token = "      Frames:\n"
-    frames_idx = template_text.find(frames_token)
-    if frames_idx != -1 and frames_idx < marker_idx:
-        rviz_text = template_text[:frames_idx] + frames_block + template_text[marker_idx:]
-    else:
-        rviz_text = template_text[:marker_idx] + frames_block + template_text[marker_idx:]
+def _path_display(name: str, topic: str, rgb: tuple[int, int, int], alpha: float, latched: bool) -> str:
+    r, g, b = rgb
+    dur = "Transient Local" if latched else "Volatile"
+    return f"""    - Alpha: {alpha}
+      Buffer Length: 1
+      Class: rviz_default_plugins/Path
+      Color: {r}; {g}; {b}
+      Enabled: true
+      Head Diameter: 0.1
+      Head Length: 0.1
+      Length: 0.1
+      Line Style: Lines
+      Line Width: 0.04
+      Name: {name}
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Pose Color: 255; 85; 85
+      Pose Style: None
+      Radius: 0.03
+      Shaft Diameter: 0.03
+      Shaft Length: 0.1
+      Topic:
+        Depth: 5
+        Durability Policy: {dur}
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: {topic}
+      Value: true
+"""
 
-    return rviz_text
+
+def _marker_array_display(name: str, topic: str, latched: bool, depth: int = 20) -> str:
+    dur = "Transient Local" if latched else "Volatile"
+    return f"""    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: {name}
+      Namespaces:
+        {{}}
+      Topic:
+        Depth: {depth}
+        Durability Policy: {dur}
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: {topic}
+      Value: true
+"""
+
+
+def _build_displays_block(drone_ids: List[int]) -> str:
+    block = _grid_display() + _tf_display(drone_ids)
+    for did in drone_ids:
+        rgb = _uav_rgb255(did)
+        block += _marker_array_display(f"uav{did} Markers", f"/uav{did}/viz/markers", latched=False)
+        block += _marker_array_display(
+            f"uav{did} Coverage Grid", f"/uav{did}/viz/coverage_grid", latched=True
+        )
+        block += _marker_array_display(
+            f"uav{did} Coverage Swath", f"/uav{did}/viz/coverage_swath", latched=True
+        )
+        # Reference plan = straight waypoints, low opacity; Actual = flown trail, full opacity.
+        block += _path_display(
+            f"uav{did} Planned Path", f"/uav{did}/viz/planned_path", rgb, alpha=0.4, latched=True
+        )
+        block += _path_display(
+            f"uav{did} Actual Path", f"/uav{did}/viz/actual_path", rgb, alpha=1.0, latched=False
+        )
+    block += _marker_array_display("Fleet Separation", "/fleet/viz/separation", latched=False)
+    return block
+
+
+def build_generated_rviz_text(drone_ids: List[int], template_text: str) -> str:
+    """Rebuild the Displays list for N UAVs (per-UAV colors, grid/path/swath/separation).
+
+    Keeps the template's Panels / Global Options / Tools / Views / Window Geometry verbatim
+    and replaces only the Displays sequence, then pins the fixed frame to 'world'.
+    """
+    displays_token = "  Displays:\n"
+    enabled_token = "\n  Enabled: true\n"
+    di = template_text.find(displays_token)
+    ei = template_text.find(enabled_token)
+    if di == -1 or ei == -1 or ei < di:
+        raise ValueError("RViz template missing Displays/Enabled anchors.")
+
+    head = template_text[: di + len(displays_token)]
+    tail = template_text[ei + 1:]  # from "  Enabled: true\n" onward
+    rviz_text = head + _build_displays_block(drone_ids) + tail
+    return rviz_text.replace("Fixed Frame: map", "Fixed Frame: world")
 
 
 def parse_args() -> argparse.Namespace:

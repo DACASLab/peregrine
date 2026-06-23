@@ -57,6 +57,12 @@
           "/uav__DRONE_ID__/status",
           "/uav__DRONE_ID__/gps_status",
           "/uav__DRONE_ID__/compute_status",
+          // Coverage-sweep viz overlays (latched). Generated in the flight container by
+          // trajectory_manager; consumed by RViz in the GCS. Keep these names in sync with
+          // the GCS subscriber allowlist in docker/scripts/generate_gcs_config.py.
+          "/uav__DRONE_ID__/viz/coverage_grid",
+          "/uav__DRONE_ID__/viz/planned_path",
+          "/uav__DRONE_ID__/viz/coverage_swath",
           // Inter-UAV collision avoidance: shared fleet bus. Every UAV publishes
           // its own FleetAgentState (uav_id is inside the message) to the SAME
           // global topic; Zenoh merges all peers' publications.
