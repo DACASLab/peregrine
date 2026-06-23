@@ -23,3 +23,6 @@ quad-firmware/
 
 # SITL regression artifacts
 artifacts/
+
+# Persisted ROS + Zenoh bridge logs (mounted from containers for post-analysis)
+logs/

@@ -36,6 +36,9 @@ services:
       - XRCE_BAUD=${XRCE_BAUD:-3000000}
       - ZENOH_BRIDGE_CONFIG=${ROS_WS:-/ros2_ws}/docker/config/zenoh/uav_bridge.json5
       - ZENOH_PORT=${ZENOH_PORT:-7447}
+      # Persist node + bridge logs to the bind-mounted workspace so they survive
+      # container restart/removal and can be analyzed on the host post-flight.
+      - ROS_LOG_DIR=${ROS_WS:-/ros2_ws}/logs/aircraft${DRONE_ID:-1}
     volumes:
       - ../../:${ROS_WS:-/ros2_ws}:rw
       - /dev:/dev

@@ -17,6 +17,15 @@ export ROS_DOMAIN_ID=${DRONE_ID:-0}
 export ROS_LOCALHOST_ONLY=${ROS_LOCALHOST_ONLY:-1}
 export RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION:-rmw_cyclonedds_cpp}
 
+# ── Persist ROS + bridge logs to a mounted directory ──────────
+# ROS_LOG_DIR is normally set per-role by the compose file to a path under the
+# bind-mounted workspace (e.g. ${ROS_WS}/logs/aircraft4), so node logs (rosout,
+# per-node stdout/stderr) survive container removal and are available on the host
+# for post-incident analysis. Fall back to a hostname-scoped dir if unset.
+export ROS_LOG_DIR="${ROS_LOG_DIR:-${ROS_WS}/logs/$(hostname)}"
+mkdir -p "${ROS_LOG_DIR}" 2>/dev/null || true
+echo "[entrypoint] ROS_LOG_DIR=${ROS_LOG_DIR}"
+
 # ── Enable multicast on loopback for DDS discovery ───────────
 # CycloneDDS needs multicast on lo when ROS_LOCALHOST_ONLY=1;
 # without this, Zenoh bridge DDS participants can't discover ROS nodes.
@@ -46,8 +55,11 @@ if [ -n "${ZENOH_BRIDGE_CONFIG}" ]; then
     sed -e "s/__DRONE_ID__/${DRONE_ID:-0}/g" \
         -e "s/__ZENOH_PORT__/${ZENOH_PORT}/g" \
         "${ZENOH_BRIDGE_CONFIG}" > "${ZENOH_RUNTIME_CONFIG}"
-    echo "[entrypoint] Starting zenoh-bridge-ros2dds (port=${ZENOH_PORT})..."
-    zenoh-bridge-ros2dds -c "${ZENOH_RUNTIME_CONFIG}" &
+    ZENOH_LOG_FILE="${ROS_LOG_DIR}/zenoh_bridge_$(date +%Y%m%d-%H%M%S).log"
+    echo "[entrypoint] Starting zenoh-bridge-ros2dds (port=${ZENOH_PORT}), logging to ${ZENOH_LOG_FILE}..."
+    # tee keeps the bridge output on the container stdout (docker logs) AND on a
+    # persisted file so the Zenoh route/discovery history survives a restart.
+    zenoh-bridge-ros2dds -c "${ZENOH_RUNTIME_CONFIG}" 2>&1 | tee -a "${ZENOH_LOG_FILE}" &
     sleep 1
 fi
 

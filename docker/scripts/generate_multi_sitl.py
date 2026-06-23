@@ -60,6 +60,8 @@ def build_uav_service(service_idx: int) -> str:
       - ROS_WS=${{ROS_WS:-/ros2_ws}}
       - ZENOH_BRIDGE_CONFIG=${{ROS_WS:-/ros2_ws}}/docker/config/zenoh/uav_bridge.json5
       - ZENOH_PORT={zenoh_port}
+      # Persist node + bridge logs per-UAV on the bind-mounted workspace for post-analysis.
+      - ROS_LOG_DIR=${{ROS_WS:-/ros2_ws}}/logs/{service_name}
     depends_on:
       sim:
         condition: service_started

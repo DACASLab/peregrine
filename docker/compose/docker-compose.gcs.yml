@@ -39,6 +39,9 @@ services:
       - GCS_UAV_IPS=${GCS_UAV_IPS:-}
       - GCS_NUM_UAVS=${GCS_NUM_UAVS:-}
       - GCS_DRONE_IDS=${GCS_DRONE_IDS:-}
+      # Persist node + bridge logs to the bind-mounted workspace so they survive
+      # container restart/removal and can be analyzed on the host post-flight.
+      - ROS_LOG_DIR=${ROS_WS:-/ros2_ws}/logs/gcs
     volumes:
       - ../../:${ROS_WS:-/ros2_ws}:rw
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
@@ -48,7 +51,8 @@ services:
         set -e;
         python3 $${ROS_WS:-/ros2_ws}/docker/scripts/generate_gcs_config.py --env-file $${ROS_WS:-/ros2_ws}/docker/.env --mode $${GCS_MODE:-sim} --zenoh-port $${ZENOH_PORT:-7459} $${GCS_UAV_IPS:+--uav-ips $$GCS_UAV_IPS} $${GCS_NUM_UAVS:+--num-uavs $$GCS_NUM_UAVS} $${GCS_DRONE_IDS:+--drone-ids $$GCS_DRONE_IDS};
         export ROS_DOMAIN_ID=99;
-        zenoh-bridge-ros2dds -c $${ROS_WS:-/ros2_ws}/docker/config/zenoh/gcs_bridge.generated.json5 &
+        mkdir -p $${ROS_LOG_DIR:-$${ROS_WS:-/ros2_ws}/logs/gcs};
+        zenoh-bridge-ros2dds -c $${ROS_WS:-/ros2_ws}/docker/config/zenoh/gcs_bridge.generated.json5 2>&1 | tee -a $${ROS_LOG_DIR:-$${ROS_WS:-/ros2_ws}/logs/gcs}/zenoh_bridge_$$(date +%Y%m%d-%H%M%S).log &
         source /opt/ros/$${ROS_DISTRO:-humble}/setup.bash &&
         [ -f $${ROS_WS:-/ros2_ws}/install/setup.bash ] && source $${ROS_WS:-/ros2_ws}/install/setup.bash;
         tmuxinator start -p $${ROS_WS:-/ros2_ws}/docker/config/tmuxinator/gcs.generated.yml
